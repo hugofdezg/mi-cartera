@@ -196,7 +196,7 @@ var syncStatus = "local";
 var wipeArmed = false, delArmed = false, syncMsg = "";
 
 function blank(){
-  return {ops:[],transfers:[],prices:{},pricesU:{},deleted:{},goal:null,proj:{contrib:150,ret:5,years:4,fee:1.25},defaults:{platform:"IBKR",type:"ETF",asset:"",fee:1.25}};
+  return {ops:[],transfers:[],prices:{},pricesU:{},deleted:{},goal:null,proj:{contrib:150,ret:5,years:4,fee:1.25},symbols:{},pricesDay:{},defaults:{platform:"IBKR",type:"ETF",asset:"",fee:1.25}};
 }
 var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function cleanOp(o){
@@ -222,6 +222,16 @@ function clampNum(v,d,lo,hi){
   if(!isFinite(v)) return d;
   return Math.min(hi,Math.max(lo,v));
 }
+function cleanSymbols(o){
+  var r = {};
+  if(o && typeof o==="object") Object.keys(o).forEach(function(k){ var v = String(o[k]||"").trim().toUpperCase().slice(0,30); if(v && /^[A-Z0-9.\-^=]+$/.test(v)) r[k] = v; });
+  return r;
+}
+function cleanDays(o){
+  var r = {};
+  if(o && typeof o==="object") Object.keys(o).forEach(function(k){ if(DATE_RE.test(String(o[k]))) r[k] = String(o[k]); });
+  return r;
+}
 function cleanProj(p){
   p = (p && typeof p==="object") ? p : {};
   return {contrib:clampNum(p.contrib,150,0,1000000),ret:clampNum(p.ret,5,-20,30),
@@ -244,6 +254,8 @@ function normalize(s){
   b.deleted = numMap(s.deleted);
   b.goal = cleanGoal(s.goal);
   b.proj = cleanProj(s.proj);
+  b.symbols = cleanSymbols(s.symbols);
+  b.pricesDay = cleanDays(s.pricesDay);
   var d = s.defaults && typeof s.defaults==="object" ? s.defaults : {};
   b.defaults = {platform:String(d.platform||"IBKR"),type:String(d.type||"ETF"),asset:String(d.asset||""),fee:isFinite(Number(d.fee))?Number(d.fee):1.25};
   return b;
@@ -386,10 +398,11 @@ function viewResumen(c){
     c.assets.forEach(function(a){
       t += '<label>Precio actual de <b>'+esc(ticker(a.asset))+'</b> (€) · precio medio '+eurP.format(a.avg)+
         '<input class="pinput" type="number" inputmode="decimal" step="any" min="0" data-price="'+esc(a.asset)+'" value="'+(a.manual?a.cur:"")+'" placeholder="'+String(a.cur).replace(".",",")+'" aria-label="Precio actual de '+esc(a.asset)+'"></label>'+
-        (a.manual ? '' : '<div class="note">Usando tu último precio de compra. Escribe el precio de mercado para ver la rentabilidad real.</div>');
+        (a.manual ? priceNote(a) : '<div class="note">Usando tu último precio de compra. Pulsa Actualizar precios o escribe el precio de mercado para ver la rentabilidad real.</div>');
     });
     t += '</div>';
   }
+  if(c.assets.length) t += quoteBlock();
   h += panelSec("Posiciones",t);
   h += '</div><div class="col">';
 
@@ -557,6 +570,75 @@ function updateProj(){
   if(box) box.innerHTML = projOut(compute());
 }
 
+/* ---------- Precios en vivo (Alpha Vantage) ---------- */
+var AV_KEY = "mi-cartera.avkey", quoting = false, quoteMsg = "";
+function getKey(){ try{ return localStorage.getItem(AV_KEY) || ""; }catch(e){ return ""; } }
+function setKey(v){ try{ if(v) localStorage.setItem(AV_KEY,v); else localStorage.removeItem(AV_KEY); }catch(e){} }
+function symbolFor(asset){
+  var s2 = state.symbols && state.symbols[asset];
+  if(s2) return s2;
+  return ticker(asset)==="SPYL" ? "SPYL.DEX" : "";
+}
+function pad2(n){ return String(n).padStart(2,"0"); }
+function priceNote(a){
+  var u = state.pricesU[a.asset] || 0;
+  if(!a.manual || !u) return "";
+  var d = new Date(u), days = Math.floor((Date.now()-u)/86400000);
+  var txt = "Actualizado el "+pad2(d.getDate())+"/"+pad2(d.getMonth()+1)+" a las "+pad2(d.getHours())+":"+pad2(d.getMinutes());
+  var day = state.pricesDay[a.asset];
+  if(day) txt += " · precio del día "+fmtDate(day).slice(0,5);
+  var warn = days>=3 ? ' <span class="neg">Lleva '+days+' días sin actualizarse.</span>' : "";
+  return '<div class="note">'+txt+'.'+warn+'</div>';
+}
+function quoteBlock(){
+  return '<button class="btn wide" data-act="quotes"'+(quoting?' disabled':'')+'>'+(quoting?"Actualizando…":"Actualizar precios")+'</button>'+
+    (quoteMsg ? '<div class="note" style="font-size:13px;color:var(--ink)">'+esc(quoteMsg)+'</div>' : '');
+}
+function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+async function fetchQuotes(){
+  if(quoting) return;
+  var key = getKey();
+  if(!key){ quoteMsg = "Añade tu clave de Alpha Vantage en Más, sección Precios en vivo."; render(); return; }
+  var list = compute().assets.map(function(a){ return {asset:a.asset,sym:symbolFor(a.asset)}; }).filter(function(x){ return x.sym; });
+  if(!list.length){ quoteMsg = "Indica el símbolo de tus activos en Más, sección Precios en vivo."; render(); return; }
+  quoting = true; quoteMsg = ""; render();
+  var ok = [], errs = [];
+  for(var i=0;i<list.length;i++){
+    var x = list[i];
+    try{
+      var r = await fetch("https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol="+encodeURIComponent(x.sym)+"&apikey="+encodeURIComponent(key));
+      if(!r.ok) throw new Error("http");
+      var j = await r.json(), q = j && j["Global Quote"], p = q ? parseFloat(q["05. price"]) : NaN;
+      if(!(p>0)) throw new Error((j && (j.Note || j.Information || j["Error Message"])) ? "limit" : "empty");
+      state.prices[x.asset] = p; state.pricesU[x.asset] = Date.now();
+      var day = q["07. latest trading day"];
+      if(DATE_RE.test(String(day))) state.pricesDay[x.asset] = day; else delete state.pricesDay[x.asset];
+      ok.push(ticker(x.asset)+" "+eurP.format(p));
+    }catch(e){
+      var why = e instanceof TypeError ? "no se pudo conectar (sin internet, o el navegador bloquea la consulta)" :
+                e.message==="limit" ? "Alpha Vantage ha rechazado la consulta (límite de uso o clave no válida)" :
+                e.message==="empty" ? "no hay datos para el símbolo "+x.sym : "error de conexión";
+      errs.push(ticker(x.asset)+": "+why);
+    }
+    if(i<list.length-1) await sleep(1300);
+  }
+  quoting = false; persist();
+  quoteMsg = (ok.length ? "Precio actualizado: "+ok.join(", ")+". " : "") + (errs.length ? errs.join(". ")+". Puedes escribir el precio a mano." : "");
+  quoteMsg = quoteMsg.trim();
+  render();
+}
+function liveSettings(){
+  var c = compute(), h = '<section class="panel"><h3 style="font-size:15px">Precios en vivo</h3>'+
+    '<p class="note" style="font-size:13px">Usa Alpha Vantage con una clave gratuita (25 consultas al día). El precio puede llegar con retraso o ser el del último día de mercado. La clave se guarda solo en este dispositivo: no va en el archivo de sincronización ni en las exportaciones.</p>'+
+    '<label class="f">Clave de Alpha Vantage<input id="av-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" value="'+esc(getKey())+'"></label>';
+  if(!c.assets.length) h += '<div class="note">Cuando registres una compra podrás indicar su símbolo aquí.</div>';
+  c.assets.forEach(function(a){
+    h += '<label class="f">Símbolo de '+esc(ticker(a.asset))+' (Xetra termina en .DEX)<input data-sym="'+esc(a.asset)+'" autocomplete="off" autocapitalize="characters" spellcheck="false" value="'+esc(symbolFor(a.asset))+'" placeholder="Por ejemplo, SPYL.DEX"></label>';
+  });
+  if(c.assets.length) h += '<button class="btn wide" data-act="quotes"'+(quoting?' disabled':'')+'>'+(quoting?"Actualizando…":"Actualizar precios ahora")+'</button>'+(quoteMsg ? '<div class="note" style="font-size:13px;color:var(--ink)">'+esc(quoteMsg)+'</div>' : '');
+  return h+'</section>';
+}
+
 function viewMas(){
   var h = '<div class="sec-h" style="margin-top:6px"><h2>Más</h2></div>';
   h += '<section class="panel" style="margin-top:0"><h3 style="font-size:15px">Sincronizar móvil y ordenador</h3>'+
@@ -566,6 +648,7 @@ function viewMas(){
     '<button class="btn ghost wide" data-act="sync-save">2. Guardar archivo actualizado</button>'+
     (syncMsg ? '<div class="note" style="font-size:13px;color:var(--ink)">'+esc(syncMsg)+'</div>' : '')+
     '<p class="note">La primera vez, salta el paso 1 y guarda el archivo en iCloud Drive. Al volver a guardarlo en el mismo sitio, elige reemplazar el archivo anterior.</p></section>';
+  h += liveSettings();
   h += '<section class="panel"><h3 style="font-size:15px">Exportar</h3>';
   if(window.XLSX) h += '<button class="btn wide" data-act="exp-xlsx">Descargar Excel (.xlsx)</button><div class="note">Incluye las pestañas OPERATIONS, TRANSFERS y RESUME, con fórmulas.</div>';
   h += '<button class="btn ghost wide" data-act="exp-ops">Descargar operaciones (.csv)</button>'+
@@ -938,8 +1021,10 @@ function mergeState(inc){
     if(!(k in state.prices) || ui > ul){
       if(state.prices[k] !== inc.prices[k]) res.upd++;
       state.prices[k] = inc.prices[k]; state.pricesU[k] = ui;
+      if(inc.pricesDay[k]) state.pricesDay[k] = inc.pricesDay[k]; else delete state.pricesDay[k];
     }
   });
+  Object.keys(inc.symbols).forEach(function(k){ if(!state.symbols[k]) state.symbols[k] = inc.symbols[k]; });
   if(inc.goal && (!state.goal || (inc.goal.u||0) > (state.goal.u||0))){ state.goal = inc.goal; res.upd++; }
   return res;
 }
@@ -988,6 +1073,7 @@ document.addEventListener("click",function(e){
   else if(a==="save") save();
   else if(a==="del") del();
   else if(a==="seed") seed();
+  else if(a==="quotes") fetchQuotes();
   else if(a==="goal") openSheet("goal", state.goal && !state.goal.off ? "goal" : null);
   else if(a==="clear-filters"){ fOps = {q:"",year:"",asset:""}; fTrf = {q:"",year:""}; render(); }
   else if(a==="wipe"){
@@ -1020,6 +1106,12 @@ document.addEventListener("change",function(e){
   if(e.target.id==="sync-file"){ if(e.target.files[0]) syncFromFile(e.target.files[0]); e.target.value=""; return; }
   if(e.target.id==="imp-file"){ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; return; }
   if(e.target.id==="fyear" || e.target.id==="fasset"){ applyFilter(); return; }
+  if(e.target.id==="av-key"){ setKey(e.target.value.trim()); return; }
+  if(e.target.dataset && e.target.dataset.sym!==undefined){
+    var sy = String(e.target.value).trim().toUpperCase().slice(0,30), an = e.target.dataset.sym;
+    if(sy && /^[A-Z0-9.\-^=]+$/.test(sy)) state.symbols[an] = sy; else delete state.symbols[an];
+    persist(); render(); return;
+  }
   var asset = e.target.dataset && e.target.dataset.price;
   if(asset===undefined) return;
   var v = parseFloat(String(e.target.value).replace(",","."));

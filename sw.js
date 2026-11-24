@@ -1,6 +1,6 @@
 // Service worker: guarda la app en el dispositivo para que abra sin conexión.
 // Si cambias index.html, sube el número de versión para que se actualice.
-const CACHE = "mi-cartera-v6";
+const CACHE = "mi-cartera-v7";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./apple-touch-icon.png"];
 const EXTRA = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
@@ -28,6 +28,11 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Solo se gestionan la propia app y sus recursos fijos. Las consultas de precios (Alpha Vantage) van siempre a la red.
+  const host = new URL(e.request.url).hostname;
+  const own = host === self.location.hostname;
+  const allowed = ["cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"];
+  if (!own && allowed.indexOf(host) < 0) return;
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
     const cached = await c.match(e.request, { ignoreSearch: true });
