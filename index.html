@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Mi cartera</title>
+<meta name="theme-color" content="#12161C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi cartera">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12161C; --surface:#1A1F27; --raise:#222833; --ink:#E6EAF0; --muted:#8B96A6; --line:#2C3440;
+  --brand:#D81222; --brand-ink:#FFFFFF; --blue:#4C9AFF; --orange:#F5A623; --teal:#2EC4B6; --violet:#A98BEA;
+  --pos:#22C07A; --neg:#FF6B6B; --shade:rgba(0,0,0,.65);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.4;font-variant-numeric:tabular-nums}
+main{padding:4px 14px 110px}
+.wrap{max-width:560px;margin:0 auto}
+.cols{display:block}
+h1,h2,h3{font-family:var(--sans);margin:0;font-weight:600}
+h2{font-size:15px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Barra superior */
+.top{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border-bottom:2px solid var(--brand)}
+.top .mark{width:6px;height:20px;background:var(--brand);border-radius:1px}
+.top b{font-weight:600;font-size:16px}
+.top .acc{margin-left:auto;color:var(--muted);font-family:var(--mono);font-size:12px}
+
+/* Paneles */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;margin-top:12px}
+.hero .lbl{color:var(--muted);font-size:13px}
+.hero .big{font-weight:600;font-size:40px;letter-spacing:-.02em;line-height:1.1;margin:4px 0 6px}
+.hero .pnl{font-family:var(--mono);font-size:16px;font-weight:500}
+.hero .pnl span{margin-left:8px}
+.hero .sub{color:var(--muted);font-size:12px;margin-top:6px}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:12px}
+.mgrid div{background:var(--surface);padding:12px 14px}
+.mgrid span{display:block;color:var(--muted);font-size:12px}
+.mgrid b{display:block;font-family:var(--mono);font-weight:500;font-size:16px;margin-top:3px}
+.mgrid small{display:block;color:var(--muted);font-size:11px;margin-top:2px;font-family:var(--mono)}
+
+/* Botones */
+.row{display:flex;gap:10px;margin-top:12px}
+.btn{flex:1;border:1px solid var(--brand);background:var(--brand);color:var(--brand-ink);border-radius:4px;padding:12px 14px;font-weight:600;text-align:center}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.small{flex:none;padding:7px 14px;font-size:14px}
+.btn.danger{background:transparent;border-color:var(--neg);color:var(--neg)}
+.btn.wide{display:block;width:100%;margin-top:10px}
+
+/* Secciones */
+.sec{margin-top:22px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px}
+.sec-h h2{color:var(--ink)}
+.note{color:var(--muted);font-size:12px;margin:6px 0 0}
+.empty{padding:22px 0;color:var(--muted)}
+.empty b{color:var(--ink)}
+
+/* Libro de cuentas */
+.ledger{border-top:1px solid var(--line)}
+.panel .ledger{border-top:0}
+.ledger .li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ledger .li:last-child{border-bottom:0}
+.ledger .li .k{color:var(--muted);font-size:14px}
+.ledger .li .v{font-family:var(--mono);font-weight:500;font-size:14px;text-align:right}
+.ledger .li .s{display:block;color:var(--muted);font-size:11px;font-weight:400}
+
+/* Tabla de posiciones */
+.tbl .th,.tbl .tr{display:grid;grid-template-columns:1.5fr .55fr .95fr 1fr 1fr;gap:6px;align-items:center}
+.tbl .th{color:var(--muted);font-size:11px;padding:0 0 8px;border-bottom:1px solid var(--line)}
+.tbl .th span{text-align:right}
+.tbl .tr{padding:10px 0;border-bottom:1px solid var(--line)}
+.tbl .tr>span{font-family:var(--mono);font-size:13px;text-align:right;min-width:0}
+.tbl .th span:first-child,.tbl .tr>span:first-child{text-align:left}
+.tk b{display:block;font-family:var(--sans);font-size:15px;font-weight:600}
+.tk small{display:block;font-family:var(--sans);color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbl .tr small.p{display:block;font-size:11px}
+.pedit{margin-top:14px}
+.pedit label{display:block;color:var(--muted);font-size:12px;margin-top:10px}
+.pedit label b{color:var(--ink)}
+.pinput{width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);font-family:var(--mono);font-size:16px}
+
+/* Listas */
+.list{border-top:1px solid var(--line)}
+.item{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 0}
+.item .l{min-width:0}
+.item .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.item .d{color:var(--muted);font-size:12px;font-family:var(--mono)}
+.item .r{text-align:right;flex:none}
+.item .r b{display:block;font-family:var(--mono);font-weight:500;font-size:14px}
+.item .r span{color:var(--muted);font-size:11px;font-family:var(--mono)}
+
+/* Gráficos */
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.stack{display:flex;height:12px;border-radius:2px;overflow:hidden;background:var(--line);margin:4px 0 12px}
+.stack i{display:block;height:100%}
+.al{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:13px}
+.al b{font-family:var(--mono);font-weight:500;font-size:13px;text-align:right}
+
+/* Navegación */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));z-index:5}
+nav button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 6px;color:var(--muted);font-size:11px;font-weight:500}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--brand)}
+
+/* Formularios */
+.overlay{position:fixed;inset:0;background:var(--shade);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--surface);border-top:2px solid var(--brand);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:10px 10px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.sheet h3{font-size:18px;margin-bottom:4px}
+.f{display:block;margin-top:12px;font-size:12px;color:var(--muted)}
+.f input,.f select{display:block;width:100%;margin-top:4px;padding:11px 12px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font-size:16px;color-scheme:dark}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.preview{margin-top:14px;padding:12px;border-radius:4px;background:var(--bg);border:1px solid var(--line);display:flex;justify-content:space-between;font-weight:500;font-family:var(--mono)}
+.err{color:var(--neg);font-size:13px;margin-top:10px;min-height:1.2em}
+@media (min-width:900px){
+  .top{padding-left:226px}
+  nav{top:0;bottom:auto;right:auto;left:0;width:200px;height:100%;flex-direction:column;justify-content:flex-start;gap:4px;border-top:0;border-right:1px solid var(--line);padding:64px 10px 10px}
+  nav button{flex:none;flex-direction:row;gap:12px;font-size:14px;padding:12px;justify-content:flex-start;border-radius:4px}
+  nav button.on{box-shadow:inset 3px 0 0 var(--brand);background:var(--raise)}
+  main{margin-left:200px;padding:8px 32px 48px}
+  .wrap{max-width:760px}
+  .wrap.wide{max-width:1120px}
+  .cols{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:start}
+  .overlay{align-items:center}
+  .sheet{border-radius:10px;max-width:460px;border:1px solid var(--line);border-top:2px solid var(--brand)}
+  .hero .big{font-size:46px}
+}
+@media (prefers-reduced-motion: no-preference){
+  .sheet{animation:up .2s ease-out}
+  @keyframes up{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+}
+</style>
+</head>
+<body>
+<header class="top"><span class="mark"></span><b>Mi cartera</b><span class="acc" id="acc"></span></header>
+<main id="app"></main>
+
+<nav id="nav" aria-label="Secciones">
+  <button data-tab="resumen"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumen</button>
+  <button data-tab="ops"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Operaciones</button>
+  <button data-tab="trf"><svg viewBox="0 0 24 24"><path d="M12 4v12M6 11l6 6 6-6M5 21h14"/></svg>Transferencias</button>
+  <button data-tab="mas"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>Más</button>
+</nav>
+
+<div id="overlay" class="overlay" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------- Estado ---------- */
+var LS_KEY = "mi-cartera.v1";
+var state = blank();
+var tab = "resumen";
+var ref = null, dbReady = false, downloads = true;
+var syncStatus = "local";
+var wipeArmed = false, delArmed = false, syncMsg = "";
+
+function blank(){
+  return {ops:[],transfers:[],prices:{},pricesU:{},deleted:{},defaults:{platform:"IBKR",type:"ETF",asset:"",fee:1.25}};
+}
+var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function cleanOp(o){
+  if(!o || typeof o.id!=="string" || !DATE_RE.test(o.date) || typeof o.asset!=="string" || !o.asset) return null;
+  var q = Number(o.qty), p = Number(o.price), f = Number(o.fee);
+  if(!(q>0) || !(p>0) || !(f>=0) || !isFinite(q+p+f)) return null;
+  return {id:o.id,platform:String(o.platform||"IBKR"),type:String(o.type||"ETF"),date:o.date,asset:o.asset,qty:q,price:p,fee:f,u:Number(o.u)||0};
+}
+function cleanTrf(t){
+  if(!t || typeof t.id!=="string" || !DATE_RE.test(t.date)) return null;
+  var m = Number(t.amount);
+  if(!(m>0) || !isFinite(m)) return null;
+  return {id:t.id,platform:String(t.platform||"IBKR"),date:t.date,amount:m,u:Number(t.u)||0};
+}
+function numMap(o){
+  var r = {};
+  if(o && typeof o==="object") Object.keys(o).forEach(function(k){ var v = Number(o[k]); if(isFinite(v) && v>=0) r[k] = v; });
+  return r;
+}
+function normalize(s){
+  var b = blank();
+  if(!s || typeof s!=="object") return b;
+  b.ops = (Array.isArray(s.ops)?s.ops:[]).map(cleanOp).filter(Boolean);
+  b.transfers = (Array.isArray(s.transfers)?s.transfers:[]).map(cleanTrf).filter(Boolean);
+  b.prices = numMap(s.prices);
+  b.pricesU = numMap(s.pricesU);
+  b.deleted = numMap(s.deleted);
+  var d = s.defaults && typeof s.defaults==="object" ? s.defaults : {};
+  b.defaults = {platform:String(d.platform||"IBKR"),type:String(d.type||"ETF"),asset:String(d.asset||""),fee:isFinite(Number(d.fee))?Number(d.fee):1.25};
+  return b;
+}
+try{
+  var raw = localStorage.getItem(LS_KEY);
+  if(raw) state = normalize(JSON.parse(raw));
+}catch(e){}
+
+/* ---------- Utilidades ---------- */
+var eur = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"});
+var eurS = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",signDisplay:"exceptZero"});
+var eurP = new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:4});
+var qtyF = new Intl.NumberFormat("es-ES",{maximumFractionDigits:6});
+var pctF = new Intl.NumberFormat("es-ES",{style:"percent",minimumFractionDigits:2,maximumFractionDigits:2,signDisplay:"exceptZero"});
+var pctPlain = new Intl.NumberFormat("es-ES",{style:"percent",minimumFractionDigits:1,maximumFractionDigits:1});
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function todayStr(){
+  var d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function fmtDate(s){ var p = String(s).split("-"); return p.length===3 ? p[2]+"/"+p[1]+"/"+p[0] : s; }
+function toTime(s){ var p = s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2],12).getTime(); }
+function cls(n){ return n>0 ? "pos" : n<0 ? "neg" : ""; }
+function cmpDate(a,b){ return a.date<b.date ? -1 : a.date>b.date ? 1 : 0; }
+function sum(arr,f){ return arr.reduce(function(t,x){return t+f(x);},0); }
+
+/* ---------- Cálculos ---------- */
+function compute(){
+  var by = {};
+  state.ops.slice().sort(cmpDate).forEach(function(o){
+    var a = by[o.asset] || (by[o.asset] = {asset:o.asset,qty:0,gross:0,fee:0,last:o.price});
+    a.qty += o.qty; a.gross += o.qty*o.price; a.fee += o.fee; a.last = o.price;
+  });
+  var gross=0, fee=0, value=0;
+  var assets = Object.keys(by).map(function(k){
+    var a = by[k], manual = Number(state.prices[a.asset]);
+    a.manual = manual > 0;
+    a.cur = a.manual ? manual : a.last;
+    a.value = a.qty*a.cur;
+    a.cost = a.gross + a.fee;
+    a.pnl = a.value - a.cost;
+    a.pct = a.cost ? a.pnl/a.cost : 0;
+    a.avg = a.qty ? a.gross/a.qty : 0;
+    gross += a.gross; fee += a.fee; value += a.value;
+    return a;
+  });
+  var transferred = sum(state.transfers,function(t){return t.amount;});
+  var spent = gross + fee;
+  var cash = transferred - spent;
+  return {assets:assets,gross:gross,fee:fee,value:value,transferred:transferred,spent:spent,cash:cash,
+          total:value+cash,pnl:value-spent,pct:spent?(value-spent)/spent:0};
+}
+
+/* ---------- Vistas ---------- */
+function isEmpty(){ return !state.ops.length && !state.transfers.length; }
+
+function ticker(n){ var m = String(n).trim().split(/[\s(]/)[0]; return m || String(n); }
+function metric(k,v,sub,c){ return '<div><span>'+k+'</span><b'+(c?' class="'+c+'"':'')+'>'+v+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'; }
+function panelSec(title,inner){ return '<section class="sec"><div class="sec-h"><h2>'+title+'</h2></div><div class="panel" style="margin-top:0">'+inner+'</div></section>'; }
+
+function viewResumen(c){
+  if(isEmpty()){
+    return '<div class="panel hero"><div class="lbl">Valor liquidativo neto</div><div class="big">'+eur.format(0)+'</div></div>'+
+      '<div class="empty"><b>Aún no hay datos.</b><br>Registra tu primera transferencia y tu primera compra, o importa lo que ya tenías en el Excel.</div>'+
+      '<div class="row"><button class="btn" data-act="new-trf">Nueva transferencia</button><button class="btn ghost" data-act="new-op">Nueva operación</button></div>'+
+      '<button class="btn ghost wide" data-act="seed">Importar mis datos actuales</button>';
+  }
+  var h = '<div class="cols"><div class="col"><div class="panel hero"><div class="lbl">Valor liquidativo neto</div>'+
+    '<div class="big">'+eur.format(c.total)+'</div>'+
+    '<div class="pnl '+cls(c.pnl)+'">'+eurS.format(c.pnl)+'<span>'+pctF.format(c.pct)+'</span></div>'+
+    '<div class="sub">P&amp;L no realizado, con comisiones incluidas</div></div>';
+  h += '<div class="mgrid">'+
+    metric("Efectivo",eur.format(c.cash),"",c.cash<0?"neg":"")+
+    metric("Posiciones",eur.format(c.value))+
+    metric("Total transferido",eur.format(c.transferred))+
+    metric("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" de lo invertido":"")+
+    '</div>';
+  h += '<div class="row"><button class="btn" data-act="new-op">Nueva operación</button><button class="btn ghost" data-act="new-trf">Nueva transferencia</button></div>';
+
+  var t = '';
+  if(!c.assets.length){ t = '<div class="empty" style="padding:6px 0">Cuando registres una compra aparecerá aquí.</div>'; }
+  else {
+    t = '<div class="tbl"><div class="th"><span>Activo</span><span>Cant.</span><span>Últ.</span><span>Valor</span><span>P&amp;L</span></div>';
+    c.assets.forEach(function(a){
+      t += '<div class="tr"><span class="tk"><b>'+esc(ticker(a.asset))+'</b><small>'+esc(a.asset)+'</small></span>'+
+        '<span>'+qtyF.format(a.qty)+'</span>'+
+        '<span>'+eurP.format(a.cur)+'</span>'+
+        '<span>'+eur.format(a.value)+'</span>'+
+        '<span class="'+cls(a.pnl)+'">'+eurS.format(a.pnl)+'<small class="p">'+pctF.format(a.pct)+'</small></span></div>';
+    });
+    t += '</div><div class="pedit">';
+    c.assets.forEach(function(a){
+      t += '<label>Precio actual de <b>'+esc(ticker(a.asset))+'</b> (€) · precio medio '+eurP.format(a.avg)+
+        '<input class="pinput" type="number" inputmode="decimal" step="any" min="0" data-price="'+esc(a.asset)+'" value="'+(a.manual?a.cur:"")+'" placeholder="'+String(a.cur).replace(".",",")+'" aria-label="Precio actual de '+esc(a.asset)+'"></label>'+
+        (a.manual ? '' : '<div class="note">Usando tu último precio de compra. Escribe el precio de mercado para ver la rentabilidad real.</div>');
+    });
+    t += '</div>';
+  }
+  h += panelSec("Posiciones",t);
+  h += '</div><div class="col">';
+
+  h += panelSec("Cuenta",'<div class="ledger">'+
+    li("Total gastado",eur.format(c.spent))+
+    li("Invertido (importe bruto)",eur.format(c.gross))+
+    li("Efectivo en cartera",'<span class="'+(c.cash<0?"neg":"")+'">'+eur.format(c.cash)+'</span>')+
+    '</div>');
+  h += panelSec("Transferido y gastado",evoChart());
+  h += panelSec("Reparto de la cartera",allocChart(c));
+  h += '</div></div>';
+  return h;
+}
+function li(k,v,s){ return '<div class="li"><span class="k">'+k+'</span><span class="v">'+v+(s?'<span class="s">'+s+'</span>':'')+'</span></div>'; }
+
+function viewOps(){
+  var h = '<div class="sec-h" style="margin-top:6px"><h2>Operaciones</h2><button class="btn small" data-act="new-op">Añadir</button></div>';
+  if(!state.ops.length) return h+'<div class="empty">Todavía no has registrado ninguna compra.</div>';
+  h += '<div class="list">';
+  state.ops.slice().sort(cmpDate).reverse().forEach(function(o){
+    var g = o.qty*o.price;
+    h += '<button class="item" data-act="edit-op" data-id="'+esc(o.id)+'"><div class="l"><div class="t">'+esc(o.asset)+'</div>'+
+      '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div></div>'+
+      '<div class="r"><b>'+eur.format(g+o.fee)+'</b><span>comisión '+eur.format(o.fee)+'</span></div></button>';
+  });
+  return h+'</div><div class="note">Toca una operación para editarla o borrarla.</div>';
+}
+
+function viewTrf(){
+  var h = '<div class="sec-h" style="margin-top:6px"><h2>Transferencias</h2><button class="btn small" data-act="new-trf">Añadir</button></div>';
+  if(!state.transfers.length) return h+'<div class="empty">Todavía no has registrado ninguna transferencia.</div>';
+  h += '<div class="list">';
+  state.transfers.slice().sort(cmpDate).reverse().forEach(function(t){
+    h += '<button class="item" data-act="edit-trf" data-id="'+esc(t.id)+'"><div class="l"><div class="t">'+fmtDate(t.date)+'</div>'+
+      '<div class="d">'+esc(t.platform)+'</div></div><div class="r"><b>'+eur.format(t.amount)+'</b></div></button>';
+  });
+  var tot = sum(state.transfers,function(t){return t.amount;});
+  return h+'</div><div class="ledger" style="margin-top:14px">'+li("Total transferido",eur.format(tot))+'</div>';
+}
+
+function viewMas(){
+  var h = '<div class="sec-h" style="margin-top:6px"><h2>Más</h2></div>';
+  h += '<section class="panel" style="margin-top:0"><h3 style="font-size:15px">Sincronizar móvil y ordenador</h3>'+
+    '<p class="note" style="font-size:13px">Guarda un archivo en iCloud Drive y úsalo en todos tus dispositivos. En cada uno, primero trae los cambios del archivo y después guarda el archivo actualizado. Nada se pierde: los datos se fusionan.</p>'+
+    '<button class="btn wide" data-act="sync-pick">1. Traer cambios del archivo</button>'+
+    '<input type="file" id="sync-file" accept=".json,application/json" hidden>'+
+    '<button class="btn ghost wide" data-act="sync-save">2. Guardar archivo actualizado</button>'+
+    (syncMsg ? '<div class="note" style="font-size:13px;color:var(--ink)">'+esc(syncMsg)+'</div>' : '')+
+    '<p class="note">La primera vez, salta el paso 1 y guarda el archivo en iCloud Drive. Al volver a guardarlo en el mismo sitio, elige reemplazar el archivo anterior.</p></section>';
+  h += '<section class="panel"><h3 style="font-size:15px">Exportar</h3>';
+  if(window.XLSX) h += '<button class="btn wide" data-act="exp-xlsx">Descargar Excel (.xlsx)</button><div class="note">Incluye las pestañas OPERATIONS, TRANSFERS y RESUME, con fórmulas.</div>';
+  h += '<button class="btn ghost wide" data-act="exp-ops">Descargar operaciones (.csv)</button>'+
+       '<button class="btn ghost wide" data-act="exp-trf">Descargar transferencias (.csv)</button></section>';
+  h += '<section class="panel"><h3 style="font-size:15px">Datos</h3>'+
+    '<p class="note" style="font-size:13px">Los datos se guardan solo en este dispositivo. Si borras los datos del navegador o desinstalas la app, se pierden, así que conviene guardar el archivo de sincronización de vez en cuando.</p>'+
+    '<button class="btn ghost wide" data-act="imp-json">Restaurar desde un archivo (reemplaza todo)</button>'+
+    '<input type="file" id="imp-file" accept=".json,application/json" hidden>';
+  if(isEmpty()) h += '<button class="btn ghost wide" data-act="seed">Importar mis datos actuales</button>';
+  else h += '<button class="btn danger wide" data-act="wipe">'+(wipeArmed?"Pulsa otra vez para borrar todo":"Borrar todos los datos")+'</button>';
+  return h+'</section>';
+}
+
+/* ---------- Gráficos ---------- */
+function niceMax(v){
+  if(!(v>0)) return 100;
+  var p = Math.pow(10,Math.floor(Math.log10(v))), n = v/p;
+  return (n<=1?1:n<=2?2:n<=5?5:10)*p;
+}
+function evoChart(){
+  var ev = [];
+  state.transfers.forEach(function(t){ ev.push({d:t.date,t:t.amount,s:0}); });
+  state.ops.forEach(function(o){ ev.push({d:o.date,t:0,s:o.qty*o.price+o.fee}); });
+  if(!ev.length) return '<div class="empty">Sin datos todavía.</div>';
+  ev.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});
+  var pts = [], T=0, S=0;
+  ev.forEach(function(e){
+    T += e.t; S += e.s;
+    var last = pts[pts.length-1];
+    if(last && last.d===e.d){ last.T=T; last.S=S; } else pts.push({d:e.d,T:T,S:S});
+  });
+  var td = todayStr();
+  if(pts[pts.length-1].d < td) pts.push({d:td,T:T,S:S});
+  var W=340,H=190,pl=46,pr=12,pt=10,pb=26;
+  var t0 = toTime(pts[0].d), t1 = toTime(pts[pts.length-1].d), span = t1-t0;
+  var ymax = niceMax(Math.max(T,S,1));
+  function X(d){ return span ? pl+(toTime(d)-t0)/span*(W-pl-pr) : pl+(W-pl-pr)/2; }
+  function Y(v){ return pt+(1-v/ymax)*(H-pt-pb); }
+  var g = "";
+  for(var i=0;i<=4;i++){
+    var v = ymax*i/4, y = Y(v);
+    g += '<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/>'+
+         '<text x="'+(pl-6)+'" y="'+(y+3.5)+'" text-anchor="end" font-size="10" style="fill:var(--muted)">'+Math.round(v)+' €</text>';
+  }
+  function path(key){
+    var d = "";
+    pts.forEach(function(p,i){
+      if(i===0) d += "M"+X(p.d)+" "+Y(p[key]);
+      else d += " L"+X(p.d)+" "+Y(pts[i-1][key])+" L"+X(p.d)+" "+Y(p[key]);
+    });
+    return d;
+  }
+  function dots(key,color){
+    return pts.filter(function(p,i){return p.d<=td && (i<pts.length-1 || pts.length===1 || p.d===td);}).map(function(p){
+      return '<circle cx="'+X(p.d)+'" cy="'+Y(p[key])+'" r="3" style="fill:var('+color+')"/>';
+    }).join("");
+  }
+  var xl = '<text x="'+pl+'" y="'+(H-6)+'" font-size="10" style="fill:var(--muted)">'+fmtDate(pts[0].d).slice(0,5)+'</text>';
+  if(span) xl += '<text x="'+(W-pr)+'" y="'+(H-6)+'" text-anchor="end" font-size="10" style="fill:var(--muted)">'+fmtDate(pts[pts.length-1].d).slice(0,5)+'</text>';
+  return '<div class="chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Evolución de lo transferido y lo gastado">'+g+
+    '<path d="'+path("T")+'" fill="none" style="stroke:var(--orange)" stroke-width="2.2" stroke-linejoin="round"/>'+
+    '<path d="'+path("S")+'" fill="none" style="stroke:var(--blue)" stroke-width="2.2" stroke-linejoin="round"/>'+
+    dots("T","--orange")+dots("S","--blue")+xl+'</svg>'+
+    '<div class="legend"><span><i class="dot" style="background:var(--orange)"></i>Transferido acumulado</span><span><i class="dot" style="background:var(--blue)"></i>Gastado acumulado</span></div></div>';
+}
+function allocChart(c){
+  var cols = ["var(--blue)","var(--orange)","var(--teal)","var(--violet)"];
+  var items = c.assets.map(function(a,i){return {n:a.asset,v:a.value,c:cols[i%cols.length]};});
+  if(c.cash>0) items.push({n:"Efectivo",v:c.cash,c:"var(--muted)"});
+  var tot = sum(items,function(x){return x.v;});
+  if(!(tot>0)) return '<div class="empty">Sin datos todavía.</div>';
+  var h = '<div class="stack" role="img" aria-label="Reparto de la cartera">';
+  items.forEach(function(x){ h += '<i style="width:'+(x.v/tot*100)+'%;background:'+x.c+'"></i>'; });
+  h += '</div>';
+  items.forEach(function(x){
+    h += '<div class="al"><span><i class="dot" style="background:'+x.c+'"></i>'+esc(x.n)+'</span><b>'+pctPlain.format(x.v/tot)+' · '+eur.format(x.v)+'</b></div>';
+  });
+  return h;
+}
+
+/* ---------- Render ---------- */
+function render(){
+  var c = compute();
+  document.getElementById("acc").textContent = (state.defaults.platform||"IBKR")+" · "+fmtDate(todayStr());
+  var v = tab==="resumen" ? viewResumen(c) : tab==="ops" ? viewOps() : tab==="trf" ? viewTrf() : viewMas();
+  document.getElementById("app").innerHTML = '<div class="wrap'+(tab==="resumen"?" wide":"")+'">'+v+'</div>';
+  Array.prototype.forEach.call(document.querySelectorAll("#nav button"),function(b){
+    b.classList.toggle("on", b.dataset.tab===tab);
+    if(b.dataset.tab===tab) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
+}
+
+/* ---------- Formularios ---------- */
+var editing = null; // {kind,id}
+function openSheet(kind,id){
+  editing = {kind:kind,id:id||null};
+  delArmed = false;
+  var d = state.defaults, h = "";
+  if(kind==="op"){
+    var o = id ? state.ops.filter(function(x){return x.id===id;})[0] : null;
+    var assets = Array.from(new Set(state.ops.map(function(x){return x.asset;})));
+    h = '<h3>'+(o?"Editar operación":"Nueva operación")+'</h3>'+
+      '<label class="f">Fecha<input id="f-date" type="date" value="'+(o?o.date:todayStr())+'"></label>'+
+      '<label class="f">Activo<input id="f-asset" list="assets" autocomplete="off" value="'+esc(o?o.asset:d.asset)+'" placeholder="Por ejemplo, SPYL"></label>'+
+      '<datalist id="assets">'+assets.map(function(a){return '<option value="'+esc(a)+'">';}).join("")+'</datalist>'+
+      '<div class="two"><label class="f">Cantidad<input id="f-qty" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.qty:"")+'"></label>'+
+      '<label class="f">Precio (€)<input id="f-price" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.price:"")+'"></label></div>'+
+      '<div class="two"><label class="f">Comisión (€)<input id="f-fee" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.fee:d.fee)+'"></label>'+
+      '<label class="f">Plataforma<input id="f-platform" value="'+esc(o?o.platform:d.platform)+'"></label></div>'+
+      '<label class="f">Tipo de activo<input id="f-type" value="'+esc(o?o.type:d.type)+'"></label>'+
+      '<div class="preview"><span>Total de la operación</span><span id="f-total">'+eur.format(0)+'</span></div>';
+  } else {
+    var t = id ? state.transfers.filter(function(x){return x.id===id;})[0] : null;
+    h = '<h3>'+(t?"Editar transferencia":"Nueva transferencia")+'</h3>'+
+      '<label class="f">Fecha<input id="f-date" type="date" value="'+(t?t.date:todayStr())+'"></label>'+
+      '<label class="f">Cantidad (€)<input id="f-amount" type="number" inputmode="decimal" step="any" min="0" value="'+(t?t.amount:"")+'"></label>'+
+      '<label class="f">Plataforma<input id="f-platform" value="'+esc(t?t.platform:d.platform)+'"></label>';
+  }
+  h += '<div class="err" id="f-err" role="alert"></div>'+
+    '<div class="row"><button class="btn ghost" data-act="close">Cancelar</button><button class="btn" data-act="save">Guardar</button></div>'+
+    (id ? '<button class="btn danger wide" data-act="del" id="f-del">Eliminar</button>' : '');
+  var sh = document.getElementById("sheet");
+  sh.innerHTML = h;
+  document.getElementById("overlay").hidden = false;
+  updateTotal();
+  var first = document.getElementById(kind==="op"?"f-asset":"f-amount");
+  if(first && !id) setTimeout(function(){ try{ first.focus(); }catch(e){} },60);
+}
+function closeSheet(){ document.getElementById("overlay").hidden = true; editing = null; }
+function val(id){ return (document.getElementById(id)||{}).value || ""; }
+function num(id){ return parseFloat(String(val(id)).replace(",",".")); }
+function updateTotal(){
+  var el = document.getElementById("f-total");
+  if(!el) return;
+  var q = num("f-qty"), p = num("f-price"), f = num("f-fee");
+  el.textContent = eur.format((isFinite(q)&&isFinite(p)?q*p:0)+(isFinite(f)?f:0));
+}
+function fail(m){ document.getElementById("f-err").textContent = m; }
+
+function save(){
+  if(!editing) return;
+  var date = val("f-date"), platform = val("f-platform").trim();
+  if(!date) return fail("Elige una fecha.");
+  if(!platform) return fail("Escribe la plataforma.");
+  if(editing.kind==="op"){
+    var asset = val("f-asset").trim(), type = val("f-type").trim() || "ETF";
+    var qty = num("f-qty"), price = num("f-price"), fee = num("f-fee");
+    if(!asset) return fail("Escribe el nombre del activo.");
+    if(!(qty>0)) return fail("La cantidad debe ser mayor que 0.");
+    if(!(price>0)) return fail("El precio debe ser mayor que 0.");
+    if(!(fee>=0)) return fail("Escribe la comisión (0 si no hay).");
+    var rec = {id:editing.id||uid(),platform:platform,type:type,date:date,asset:asset,qty:qty,price:price,fee:fee,u:Date.now()};
+    if(editing.id) state.ops = state.ops.map(function(x){return x.id===editing.id?rec:x;});
+    else state.ops.push(rec);
+    state.defaults = {platform:platform,type:type,asset:asset,fee:fee};
+  } else {
+    var amount = num("f-amount");
+    if(!(amount>0)) return fail("La cantidad debe ser mayor que 0.");
+    var r = {id:editing.id||uid(),platform:platform,date:date,amount:amount,u:Date.now()};
+    if(editing.id) state.transfers = state.transfers.map(function(x){return x.id===editing.id?r:x;});
+    else state.transfers.push(r);
+    state.defaults.platform = platform;
+  }
+  persist(); closeSheet(); render();
+}
+function del(){
+  if(!editing || !editing.id) return;
+  var b = document.getElementById("f-del");
+  if(!delArmed){ delArmed = true; b.textContent = "Pulsa otra vez para eliminar"; return; }
+  state.deleted[editing.id] = Date.now();
+  if(editing.kind==="op") state.ops = state.ops.filter(function(x){return x.id!==editing.id;});
+  else state.transfers = state.transfers.filter(function(x){return x.id!==editing.id;});
+  persist(); closeSheet(); render();
+}
+
+/* ---------- Guardado ---------- */
+var timer = null, writing = false, dirty = false;
+function persist(){
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){}
+  if(ref && dbReady){ dirty = true; clearTimeout(timer); timer = setTimeout(flush,500); }
+}
+async function flush(){
+  if(writing){ timer = setTimeout(flush,300); return; }
+  if(!dirty) return;
+  dirty = false; writing = true;
+  try{ await ref.set(JSON.parse(JSON.stringify(state))); syncStatus = "ok"; }
+  catch(e){ syncStatus = "error"; }
+  writing = false;
+  if(tab==="mas") render();
+  if(dirty) flush();
+}
+function withTimeout(p,ms){
+  return Promise.race([p,new Promise(function(_,rej){ setTimeout(function(){ rej(new Error("timeout")); },ms); })]);
+}
+/* ---------- Exportar ---------- */
+function csvCell(v){ var s = String(v); return /[;"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function nc(n){ return String(n).replace(".",","); }
+function csvOps(){
+  var rows = [["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)"]];
+  state.ops.slice().sort(cmpDate).forEach(function(o){
+    var g = o.qty*o.price;
+    rows.push([o.platform,o.type,fmtDate(o.date),o.asset,nc(o.qty),nc(o.price),nc(+g.toFixed(4)),nc(o.fee),nc(+(g+o.fee).toFixed(4))]);
+  });
+  return "\ufeff"+rows.map(function(r){return r.map(csvCell).join(";");}).join("\r\n");
+}
+function csvTrf(){
+  var rows = [["Plataforma","Fecha","Cantidad (€)"]];
+  state.transfers.slice().sort(cmpDate).forEach(function(t){ rows.push([t.platform,fmtDate(t.date),nc(t.amount)]); });
+  return "\ufeff"+rows.map(function(r){return r.map(csvCell).join(";");}).join("\r\n");
+}
+function dateObj(s){ var p = s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2],12); }
+function buildXlsx(){
+  var X = window.XLSX, wb = X.utils.book_new(), EUR = '#,##0.00 "€"', n, i;
+  var ops = state.ops.slice().sort(cmpDate);
+  var a1 = [["HISTORIAL DE OPERACIONES"],["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)"]];
+  ops.forEach(function(o){ a1.push([o.platform,o.type,dateObj(o.date),o.asset,o.qty,o.price,null,o.fee,null]); });
+  var w1 = X.utils.aoa_to_sheet(a1,{cellDates:true});
+  ops.forEach(function(o,k){
+    n = k+3;
+    w1["C"+n].z = "dd/mm/yyyy"; w1["F"+n].z = "0.0000"; w1["H"+n].z = EUR;
+    w1["G"+n] = {t:"n",f:"E"+n+"*F"+n,v:o.qty*o.price,z:EUR};
+    w1["I"+n] = {t:"n",f:"G"+n+"+H"+n,v:o.qty*o.price+o.fee,z:EUR};
+  });
+  w1["!ref"] = "A1:I"+(ops.length+2);
+  w1["!merges"] = [{s:{r:0,c:0},e:{r:0,c:8}}];
+  w1["!cols"] = [{wch:11},{wch:8},{wch:12},{wch:36},{wch:10},{wch:11},{wch:17},{wch:13},{wch:12}];
+  X.utils.book_append_sheet(wb,w1,"OPERATIONS");
+
+  var trf = state.transfers.slice().sort(cmpDate);
+  var a2 = [["HISTORIAL DE TRANSFERENCIAS"],["Plataforma","Fecha","Cantidad (€)"]];
+  trf.forEach(function(t){ a2.push([t.platform,dateObj(t.date),t.amount]); });
+  var w2 = X.utils.aoa_to_sheet(a2,{cellDates:true});
+  trf.forEach(function(t,k){ n = k+3; w2["B"+n].z = "dd/mm/yyyy"; w2["C"+n].z = EUR; });
+  w2["!ref"] = "A1:C"+(trf.length+2);
+  w2["!merges"] = [{s:{r:0,c:0},e:{r:0,c:2}}];
+  w2["!cols"] = [{wch:11},{wch:12},{wch:14}];
+  X.utils.book_append_sheet(wb,w2,"TRANSFERS");
+
+  var c = compute();
+  var a3 = [["RESUMEN"],["Activo","Cantidad","Importe bruto (€)","Comisión (€)","Total (€)"]];
+  c.assets.forEach(function(a){ a3.push([a.asset,null,null,null,null]); });
+  a3.push(["Suma total",null,null,null,null]);
+  var w3 = X.utils.aoa_to_sheet(a3);
+  var last = c.assets.length+2;
+  c.assets.forEach(function(a,k){
+    n = k+3;
+    w3["B"+n] = {t:"n",f:"SUMIF(OPERATIONS!$D$3:$D$1000,$A"+n+",OPERATIONS!E$3:E$1000)",v:a.qty};
+    w3["C"+n] = {t:"n",f:"SUMIF(OPERATIONS!$D$3:$D$1000,$A"+n+",OPERATIONS!G$3:G$1000)",v:a.gross,z:EUR};
+    w3["D"+n] = {t:"n",f:"SUMIF(OPERATIONS!$D$3:$D$1000,$A"+n+",OPERATIONS!H$3:H$1000)",v:a.fee,z:EUR};
+    w3["E"+n] = {t:"n",f:"SUMIF(OPERATIONS!$D$3:$D$1000,$A"+n+",OPERATIONS!I$3:I$1000)",v:a.cost,z:EUR};
+  });
+  var tn = last+1;
+  if(c.assets.length){
+    ["B","C","D","E"].forEach(function(col,k){
+      var v = [sum(c.assets,function(a){return a.qty;}),c.gross,c.fee,c.spent][k];
+      w3[col+tn] = {t:"n",f:"SUM("+col+"3:"+col+last+")",v:v,z:k?EUR:undefined};
+    });
+  }
+  var base = tn+2;
+  var extra = [
+    ["Total transferido","SUM(TRANSFERS!C3:C1000)",c.transferred,EUR],
+    ["Total gastado","SUM(OPERATIONS!I3:I1000)",c.spent,EUR],
+    ["Efectivo en cartera","B"+base+"-B"+(base+1),c.cash,EUR],
+    ["Valor actual de las posiciones",null,c.value,EUR],
+    ["Rentabilidad (€)","B"+(base+3)+"-B"+(base+1),c.pnl,EUR],
+    ["Rentabilidad (%)","IF(B"+(base+1)+"=0,0,B"+(base+4)+"/B"+(base+1)+")",c.pct,"0.00%"]
+  ];
+  extra.forEach(function(r,k){
+    n = base+k;
+    w3["A"+n] = {t:"s",v:r[0]};
+    w3["B"+n] = r[1] ? {t:"n",f:r[1],v:r[2],z:r[3]} : {t:"n",v:r[2],z:r[3]};
+  });
+  w3["!ref"] = "A1:E"+(base+extra.length-1);
+  w3["!merges"] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+  w3["!cols"] = [{wch:36},{wch:16},{wch:17},{wch:14},{wch:14}];
+  X.utils.book_append_sheet(wb,w3,"RESUME");
+  return X.write(wb,{bookType:"xlsx",type:"array"});
+}
+async function saveFile(name,data){
+  var type = /\.xlsx$/.test(name) ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+           : /\.json$/.test(name) ? "application/json" : "text/csv;charset=utf-8";
+  var blob = new Blob([data],{type:type});
+  if(/\.json$/.test(name) && window.showSaveFilePicker){
+    try{
+      var fh = await window.showSaveFilePicker({suggestedName:name,types:[{description:"Archivo de Mi cartera",accept:{"application/json":[".json"]}}]});
+      var w = await fh.createWritable(); await w.write(blob); await w.close(); return;
+    }catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  try{
+    var file = new File([blob],name,{type:type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:name});
+      return;
+    }
+  }catch(e){ if(e && e.name==="AbortError") return; }
+  var url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); },1500);
+}
+function exportData(){
+  return Object.assign({app:"mi-cartera",version:2,savedAt:new Date().toISOString()},state);
+}
+function readFile(file,cb){
+  var r = new FileReader();
+  r.onload = function(){
+    try{
+      var d = JSON.parse(r.result);
+      if(!d || !Array.isArray(d.ops) || !Array.isArray(d.transfers)) throw new Error("formato");
+      cb(normalize(d));
+    }catch(e){ window.alert("Ese archivo no es válido para Mi cartera."); }
+  };
+  r.readAsText(file);
+}
+function importJson(file){ // restaurar y reemplazar todo
+  readFile(file,function(d){
+    if(!isEmpty() && !window.confirm("Se reemplazarán los datos actuales por los del archivo. ¿Continuar?")) return;
+    state = d; persist(); render();
+  });
+}
+function mergeList(name,keyFn,inc,res){
+  var local = state[name], byId = {}, counts = {};
+  local.forEach(function(r){ byId[r.id] = r; var k = keyFn(r); counts[k] = (counts[k]||0)+1; });
+  // cambios en registros que ya existen: gana el más reciente
+  inc.forEach(function(r){
+    var l = byId[r.id];
+    if(l && r.u > l.u){ local[local.indexOf(l)] = r; res.upd++; }
+  });
+  // registros nuevos: solo se añade lo que falta, aunque tengan otro id
+  var by = {};
+  inc.forEach(function(r){ var k = keyFn(r); (by[k] = by[k] || []).push(r); });
+  Object.keys(by).forEach(function(k){
+    var n = by[k].length, m = counts[k]||0;
+    if(n > m){
+      by[k].filter(function(r){ return !byId[r.id]; }).slice(0,n-m).forEach(function(r){ local.push(r); res.add++; });
+    }
+  });
+}
+function mergeState(inc){
+  var res = {add:0,upd:0,del:0};
+  Object.keys(inc.deleted).forEach(function(k){ if(!(k in state.deleted)) state.deleted[k] = inc.deleted[k]; });
+  var before = state.ops.length + state.transfers.length;
+  state.ops = state.ops.filter(function(r){ return !state.deleted[r.id]; });
+  state.transfers = state.transfers.filter(function(r){ return !state.deleted[r.id]; });
+  res.del = before - state.ops.length - state.transfers.length;
+  var incOps = inc.ops.filter(function(r){ return !state.deleted[r.id]; });
+  var incTr = inc.transfers.filter(function(r){ return !state.deleted[r.id]; });
+  mergeList("ops",function(o){ return [o.platform,o.date,o.asset,o.qty,o.price,o.fee].join("|"); },incOps,res);
+  mergeList("transfers",function(t){ return [t.platform,t.date,t.amount].join("|"); },incTr,res);
+  Object.keys(inc.prices).forEach(function(k){
+    var ui = inc.pricesU[k]||0, ul = state.pricesU[k]||0;
+    if(!(k in state.prices) || ui > ul){
+      if(state.prices[k] !== inc.prices[k]) res.upd++;
+      state.prices[k] = inc.prices[k]; state.pricesU[k] = ui;
+    }
+  });
+  return res;
+}
+function syncFromFile(file){
+  readFile(file,function(d){
+    var r = mergeState(d);
+    persist();
+    var parts = [];
+    if(r.add) parts.push(r.add+" nuevo"+(r.add===1?"":"s"));
+    if(r.upd) parts.push(r.upd+" actualizado"+(r.upd===1?"":"s"));
+    if(r.del) parts.push(r.del+" borrado"+(r.del===1?"":"s"));
+    syncMsg = parts.length ? "Cambios traídos: "+parts.join(", ")+". Ahora guarda el archivo actualizado." : "No había cambios nuevos en el archivo. Guarda el archivo actualizado si quieres dejarlo al día.";
+    render();
+  });
+}
+
+/* ---------- Datos de partida ---------- */
+function seed(){
+  var asset = "SPYL (SS SPDR S&P 500 UCIT ETF ACC)";
+  state.ops = [
+    {id:"seed-op-1",platform:"IBKR",type:"ETF",date:"2026-10-19",asset:asset,qty:8,price:17.0365,fee:1.25,u:0},
+    {id:"seed-op-2",platform:"IBKR",type:"ETF",date:"2026-11-05",asset:asset,qty:5,price:16.7505,fee:1.25,u:0}
+  ];
+  state.transfers = [
+    {id:"seed-tr-1",platform:"IBKR",date:"2026-10-19",amount:150,u:0},
+    {id:"seed-tr-2",platform:"IBKR",date:"2026-11-04",amount:75,u:0},
+    {id:"seed-tr-3",platform:"IBKR",date:"2026-11-23",amount:150,u:0}
+  ];
+  state.ops.concat(state.transfers).forEach(function(r){ delete state.deleted[r.id]; });
+  state.defaults = {platform:"IBKR",type:"ETF",asset:asset,fee:1.25};
+  persist(); render();
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener("click",function(e){
+  var t = e.target.closest("[data-tab],[data-act]");
+  if(e.target.id==="overlay"){ closeSheet(); return; }
+  if(!t) return;
+  if(t.dataset.tab){ tab = t.dataset.tab; wipeArmed = false; window.scrollTo(0,0); render(); return; }
+  var a = t.dataset.act;
+  if(a==="new-op") openSheet("op");
+  else if(a==="new-trf") openSheet("trf");
+  else if(a==="edit-op") openSheet("op",t.dataset.id);
+  else if(a==="edit-trf") openSheet("trf",t.dataset.id);
+  else if(a==="close") closeSheet();
+  else if(a==="save") save();
+  else if(a==="del") del();
+  else if(a==="seed") seed();
+  else if(a==="wipe"){
+    if(!wipeArmed){ wipeArmed = true; render(); return; }
+    wipeArmed = false; var gone = state.deleted; state.ops.concat(state.transfers).forEach(function(r){ gone[r.id] = Date.now(); }); state = blank(); state.deleted = gone; persist(); render();
+  }
+  else if(a==="sync-save") saveFile("mi-cartera-sync.json",JSON.stringify(exportData(),null,2));
+  else if(a==="sync-pick"){ var sp = document.getElementById("sync-file"); if(sp) sp.click(); }
+  else if(a==="imp-json"){ var inp = document.getElementById("imp-file"); if(inp) inp.click(); }
+  else if(a==="exp-xlsx") saveFile("mi-cartera.xlsx",buildXlsx());
+  else if(a==="exp-ops") saveFile("operaciones.csv",csvOps());
+  else if(a==="exp-trf") saveFile("transferencias.csv",csvTrf());
+});
+document.addEventListener("input",function(e){
+  if(["f-qty","f-price","f-fee"].indexOf(e.target.id)>=0) updateTotal();
+});
+document.addEventListener("change",function(e){
+  if(e.target.id==="sync-file"){ if(e.target.files[0]) syncFromFile(e.target.files[0]); e.target.value=""; return; }
+  if(e.target.id==="imp-file"){ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; return; }
+  var asset = e.target.dataset && e.target.dataset.price;
+  if(asset===undefined) return;
+  var v = parseFloat(String(e.target.value).replace(",","."));
+  state.prices[asset] = v>0 ? v : 0; state.pricesU[asset] = Date.now();
+  persist(); render();
+});
+document.addEventListener("keydown",function(e){ if(e.key==="Escape" && editing) closeSheet(); });
+
+render();
+if("serviceWorker" in navigator){ window.addEventListener("load",function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); }); }
+if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(function(){}); }
+})();
+</script>
+</body>
+</html>

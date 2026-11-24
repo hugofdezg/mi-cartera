@@ -1,0 +1,17 @@
+{
+  "name": "Mi cartera",
+  "short_name": "Mi cartera",
+  "description": "Seguimiento de inversiones: operaciones, transferencias, rentabilidad y gráficos.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12161C",
+  "theme_color": "#12161C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
