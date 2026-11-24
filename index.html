@@ -398,7 +398,6 @@ function viewResumen(c){
     li("Invertido (importe bruto)",eur.format(c.gross))+
     li("Efectivo en cartera",'<span class="'+(c.cash<0?"neg":"")+'">'+eur.format(c.cash)+'</span>')+
     '</div>');
-  h += panelSec("Transferido y gastado",evoChart());
   h += panelSec("Reparto de la cartera",allocChart(c));
   h += '</div></div>';
   return h;
