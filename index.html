@@ -135,7 +135,21 @@ nav button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--brand)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .preview{margin-top:14px;padding:12px;border-radius:4px;background:var(--bg);border:1px solid var(--line);display:flex;justify-content:space-between;font-weight:500;font-family:var(--mono)}
 .err{color:var(--neg);font-size:13px;margin-top:10px;min-height:1.2em}
+.fbar{margin:6px 0 4px}
+.fbar input,.fbar select{display:block;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font-size:16px;color-scheme:dark}
+.fbar .two{margin-top:8px}
+.sumline{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);padding:8px 0;font-family:var(--mono)}
+.item .nt{color:var(--muted);font-size:12px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linkbtn{background:none;border:0;color:var(--blue);padding:0;font-size:13px;font-weight:500}
+.bar{height:10px;border-radius:2px;background:var(--line);overflow:hidden;margin:10px 0 6px}
+.bar i{display:block;height:100%}
+.nav-sm{}
+nav button .lg{display:none}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pgrid .f{margin-top:0}
 @media (min-width:900px){
+  nav button .lg{display:inline}
+  nav button .sm{display:none}
   .top{padding-left:226px}
   nav{top:0;bottom:auto;right:auto;left:0;width:200px;height:100%;flex-direction:column;justify-content:flex-start;gap:4px;border-top:0;border-right:1px solid var(--line);padding:64px 10px 10px}
   nav button{flex:none;flex-direction:row;gap:12px;font-size:14px;padding:12px;justify-content:flex-start;border-radius:4px}
@@ -161,7 +175,8 @@ nav button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--brand)}
 <nav id="nav" aria-label="Secciones">
   <button data-tab="resumen"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Resumen</button>
   <button data-tab="ops"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Operaciones</button>
-  <button data-tab="trf"><svg viewBox="0 0 24 24"><path d="M12 4v12M6 11l6 6 6-6M5 21h14"/></svg>Transferencias</button>
+  <button data-tab="trf"><svg viewBox="0 0 24 24"><path d="M12 4v12M6 11l6 6 6-6M5 21h14"/></svg><span class="lg">Transferencias</span><span class="sm">Transf.</span></button>
+  <button data-tab="proy"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9M15 6h6v6"/></svg>Proyección</button>
   <button data-tab="mas"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>Más</button>
 </nav>
 
@@ -181,25 +196,43 @@ var syncStatus = "local";
 var wipeArmed = false, delArmed = false, syncMsg = "";
 
 function blank(){
-  return {ops:[],transfers:[],prices:{},pricesU:{},deleted:{},defaults:{platform:"IBKR",type:"ETF",asset:"",fee:1.25}};
+  return {ops:[],transfers:[],prices:{},pricesU:{},deleted:{},goal:null,proj:{contrib:150,ret:5,years:4,fee:1.25},defaults:{platform:"IBKR",type:"ETF",asset:"",fee:1.25}};
 }
 var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 function cleanOp(o){
   if(!o || typeof o.id!=="string" || !DATE_RE.test(o.date) || typeof o.asset!=="string" || !o.asset) return null;
   var q = Number(o.qty), p = Number(o.price), f = Number(o.fee);
   if(!(q>0) || !(p>0) || !(f>=0) || !isFinite(q+p+f)) return null;
-  return {id:o.id,platform:String(o.platform||"IBKR"),type:String(o.type||"ETF"),date:o.date,asset:o.asset,qty:q,price:p,fee:f,u:Number(o.u)||0};
+  return {id:o.id,platform:String(o.platform||"IBKR"),type:String(o.type||"ETF"),date:o.date,asset:o.asset,qty:q,price:p,fee:f,note:String(o.note||"").slice(0,200),u:Number(o.u)||0};
 }
 function cleanTrf(t){
   if(!t || typeof t.id!=="string" || !DATE_RE.test(t.date)) return null;
   var m = Number(t.amount);
   if(!(m>0) || !isFinite(m)) return null;
-  return {id:t.id,platform:String(t.platform||"IBKR"),date:t.date,amount:m,u:Number(t.u)||0};
+  return {id:t.id,platform:String(t.platform||"IBKR"),date:t.date,amount:m,note:String(t.note||"").slice(0,200),u:Number(t.u)||0};
 }
 function numMap(o){
   var r = {};
   if(o && typeof o==="object") Object.keys(o).forEach(function(k){ var v = Number(o[k]); if(isFinite(v) && v>=0) r[k] = v; });
   return r;
+}
+function clampNum(v,d,lo,hi){
+  if(v===undefined || v===null || v==="") return d;
+  v = Number(v);
+  if(!isFinite(v)) return d;
+  return Math.min(hi,Math.max(lo,v));
+}
+function cleanProj(p){
+  p = (p && typeof p==="object") ? p : {};
+  return {contrib:clampNum(p.contrib,150,0,1000000),ret:clampNum(p.ret,5,-20,30),
+          years:Math.round(clampNum(p.years,4,1,40)),fee:clampNum(p.fee,1.25,0,1000)};
+}
+function cleanGoal(g){
+  if(!g || typeof g!=="object") return null;
+  if(g.off) return {off:true,u:Number(g.u)||0};
+  var a = Number(g.amount);
+  if(!(a>0) || !isFinite(a) || !DATE_RE.test(g.date)) return null;
+  return {name:String(g.name||"").slice(0,60),amount:a,date:g.date,u:Number(g.u)||0};
 }
 function normalize(s){
   var b = blank();
@@ -209,6 +242,8 @@ function normalize(s){
   b.prices = numMap(s.prices);
   b.pricesU = numMap(s.pricesU);
   b.deleted = numMap(s.deleted);
+  b.goal = cleanGoal(s.goal);
+  b.proj = cleanProj(s.proj);
   var d = s.defaults && typeof s.defaults==="object" ? s.defaults : {};
   b.defaults = {platform:String(d.platform||"IBKR"),type:String(d.type||"ETF"),asset:String(d.asset||""),fee:isFinite(Number(d.fee))?Number(d.fee):1.25};
   return b;
@@ -274,6 +309,48 @@ function ticker(n){ var m = String(n).trim().split(/[\s(]/)[0]; return m || Stri
 function metric(k,v,sub,c){ return '<div><span>'+k+'</span><b'+(c?' class="'+c+'"':'')+'>'+v+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'; }
 function panelSec(title,inner){ return '<section class="sec"><div class="sec-h"><h2>'+title+'</h2></div><div class="panel" style="margin-top:0">'+inner+'</div></section>'; }
 
+var MONTH = 1000*60*60*24*30.4375;
+function goalPanel(c){
+  var g = state.goal && !state.goal.off ? state.goal : null;
+  if(!g){
+    return panelSec("Meta",'<p class="note" style="margin:0 0 4px;font-size:13px">Fija un objetivo de patrimonio y una fecha. La app te dirá cuánto te falta y cuánto tendrías que aportar al mes.</p><button class="btn ghost wide" data-act="goal">Fijar una meta</button>');
+  }
+  var cur = c.total, rem = Math.max(g.amount-cur,0), pct = Math.max(0,Math.min(cur/g.amount,1));
+  var now = Date.now(), end = toTime(g.date), mLeft = (end-now)/MONTH;
+  var h = '<div class="sec-h" style="padding:0 0 4px"><b>'+esc(g.name||"Mi meta")+'</b><button class="linkbtn" data-act="goal">Editar</button></div>'+
+    '<div style="font-family:var(--mono);font-size:15px">'+eur.format(cur)+' <span style="color:var(--muted)">de '+eur.format(g.amount)+'</span></div>'+
+    '<div class="bar" role="img" aria-label="Progreso de la meta"><i style="width:'+(pct*100)+'%;background:'+(rem===0?"var(--pos)":"var(--blue)")+'"></i></div>'+
+    '<div class="note" style="margin-top:0">'+pctPlain.format(pct)+' conseguido</div>';
+  var rows = '';
+  if(rem===0){
+    rows += li("Estado",'<span class="pos">Meta alcanzada</span>');
+  } else {
+    rows += li("Te faltan",eur.format(rem));
+    rows += li("Fecha objetivo",fmtDate(g.date), mLeft>0 ? "quedan "+(mLeft<1?"menos de 1 mes":qtyF.format(Math.round(mLeft*10)/10)+" meses") : "");
+    if(mLeft>0){
+      rows += li("Aportación mensual necesaria",eur.format(rem/Math.max(1,Math.ceil(mLeft))));
+    } else {
+      rows += li("Estado",'<span class="neg">La fecha ya ha pasado</span>');
+    }
+    var first = state.transfers.map(function(t){return t.date;}).sort()[0];
+    var spanDays = first ? (now-toTime(first))/(1000*60*60*24) : 0;
+    if(spanDays >= 60){
+      var rate = c.transferred/Math.max(1,spanDays/30.4375);
+      rows += li("Tu ritmo de aportación",eur.format(rate)+" al mes");
+      if(rate>0){
+        var months = rem/rate, when = new Date(now+months*MONTH);
+        var txt = when.toLocaleDateString("es-ES",{month:"long",year:"numeric"});
+        var ok = mLeft>0 && months<=mLeft;
+        rows += li("A este ritmo llegarías",'<span class="'+(ok?"pos":"neg")+'">'+esc(txt)+'</span>', mLeft>0 ? (ok?"a tiempo":"con retraso") : "");
+      }
+    } else {
+      rows += '<div class="note">Para estimar tu ritmo de aportación hacen falta al menos 2 meses de historial.</div>';
+    }
+  }
+  h += '<div class="ledger" style="margin-top:8px">'+rows+'</div>'+
+    '<div class="note">El cálculo no incluye rentabilidad futura: no asume que tus inversiones suban ni bajen.</div>';
+  return panelSec("Meta",h);
+}
 function viewResumen(c){
   if(isEmpty()){
     return '<div class="panel hero"><div class="lbl">Valor liquidativo neto</div><div class="big">'+eur.format(0)+'</div></div>'+
@@ -292,6 +369,7 @@ function viewResumen(c){
     metric("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" de lo invertido":"")+
     '</div>';
   h += '<div class="row"><button class="btn" data-act="new-op">Nueva operación</button><button class="btn ghost" data-act="new-trf">Nueva transferencia</button></div>';
+  h += goalPanel(c);
 
   var t = '';
   if(!c.assets.length){ t = '<div class="empty" style="padding:6px 0">Cuando registres una compra aparecerá aquí.</div>'; }
@@ -327,29 +405,157 @@ function viewResumen(c){
 }
 function li(k,v,s){ return '<div class="li"><span class="k">'+k+'</span><span class="v">'+v+(s?'<span class="s">'+s+'</span>':'')+'</span></div>'; }
 
-function viewOps(){
-  var h = '<div class="sec-h" style="margin-top:6px"><h2>Operaciones</h2><button class="btn small" data-act="new-op">Añadir</button></div>';
-  if(!state.ops.length) return h+'<div class="empty">Todavía no has registrado ninguna compra.</div>';
-  h += '<div class="list">';
-  state.ops.slice().sort(cmpDate).reverse().forEach(function(o){
-    var g = o.qty*o.price;
+var fOps = {q:"",year:"",asset:""}, fTrf = {q:"",year:""};
+function matchQ(txt,q){ return !q || txt.toLowerCase().indexOf(q.toLowerCase().trim())>=0; }
+function yearsOf(arr){ return Array.from(new Set(arr.map(function(r){return r.date.slice(0,4);}))).sort().reverse(); }
+function filterBar(f,years,assets){
+  var h = '<div class="fbar"><input id="fq" type="search" placeholder="Buscar por activo, nota o fecha" value="'+esc(f.q)+'" aria-label="Buscar" autocomplete="off">'+
+    '<div class="two"><select id="fyear" aria-label="Año"><option value="">Todos los años</option>'+
+    years.map(function(y){return '<option value="'+y+'"'+(f.year===y?' selected':'')+'>'+y+'</option>';}).join("")+'</select>';
+  if(assets) h += '<select id="fasset" aria-label="Activo"><option value="">Todos los activos</option>'+
+    assets.map(function(a){return '<option value="'+esc(a)+'"'+(f.asset===a?' selected':'')+'>'+esc(ticker(a))+'</option>';}).join("")+'</select>';
+  else h += '<div></div>';
+  return h+'</div></div>';
+}
+function opsListHtml(){
+  if(!state.ops.length) return '<div class="empty">Todavía no has registrado ninguna compra.</div>';
+  var list = state.ops.filter(function(o){
+    return (!fOps.year||o.date.slice(0,4)===fOps.year) && (!fOps.asset||o.asset===fOps.asset) &&
+      matchQ([o.asset,o.note,o.platform,fmtDate(o.date)].join(" "),fOps.q);
+  }).sort(cmpDate).reverse();
+  if(!list.length) return '<div class="empty">Ninguna operación coincide con los filtros.<br><button class="linkbtn" data-act="clear-filters">Quitar filtros</button></div>';
+  var tot = sum(list,function(o){return o.qty*o.price+o.fee;}), fee = sum(list,function(o){return o.fee;});
+  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Total '+eur.format(tot)+' · Comisiones '+eur.format(fee)+'</span></div><div class="list">';
+  list.forEach(function(o){
     h += '<button class="item" data-act="edit-op" data-id="'+esc(o.id)+'"><div class="l"><div class="t">'+esc(o.asset)+'</div>'+
-      '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div></div>'+
-      '<div class="r"><b>'+eur.format(g+o.fee)+'</b><span>comisión '+eur.format(o.fee)+'</span></div></button>';
+      '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div>'+
+      (o.note ? '<div class="nt">“'+esc(o.note)+'”</div>' : '')+'</div>'+
+      '<div class="r"><b>'+eur.format(o.qty*o.price+o.fee)+'</b><span>comisión '+eur.format(o.fee)+'</span></div></button>';
   });
   return h+'</div><div class="note">Toca una operación para editarla o borrarla.</div>';
 }
-
+function viewOps(){
+  var h = '<div class="sec-h" style="margin-top:6px"><h2>Operaciones</h2><button class="btn small" data-act="new-op">Añadir</button></div>';
+  if(!state.ops.length) return h+'<div class="empty">Todavía no has registrado ninguna compra.</div>';
+  var assets = Array.from(new Set(state.ops.map(function(o){return o.asset;})));
+  return h+filterBar(fOps,yearsOf(state.ops),assets)+'<div id="listbox">'+opsListHtml()+'</div>';
+}
+function trfListHtml(){
+  if(!state.transfers.length) return '<div class="empty">Todavía no has registrado ninguna transferencia.</div>';
+  var list = state.transfers.filter(function(t){
+    return (!fTrf.year||t.date.slice(0,4)===fTrf.year) && matchQ([t.platform,t.note,fmtDate(t.date)].join(" "),fTrf.q);
+  }).sort(cmpDate).reverse();
+  if(!list.length) return '<div class="empty">Ninguna transferencia coincide con los filtros.<br><button class="linkbtn" data-act="clear-filters">Quitar filtros</button></div>';
+  var tot = sum(list,function(t){return t.amount;});
+  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" transferencia":" transferencias")+'</span><span>Total '+eur.format(tot)+'</span></div><div class="list">';
+  list.forEach(function(t){
+    h += '<button class="item" data-act="edit-trf" data-id="'+esc(t.id)+'"><div class="l"><div class="t">'+fmtDate(t.date)+'</div>'+
+      '<div class="d">'+esc(t.platform)+'</div>'+(t.note ? '<div class="nt">“'+esc(t.note)+'”</div>' : '')+'</div>'+
+      '<div class="r"><b>'+eur.format(t.amount)+'</b></div></button>';
+  });
+  return h+'</div>';
+}
 function viewTrf(){
   var h = '<div class="sec-h" style="margin-top:6px"><h2>Transferencias</h2><button class="btn small" data-act="new-trf">Añadir</button></div>';
   if(!state.transfers.length) return h+'<div class="empty">Todavía no has registrado ninguna transferencia.</div>';
-  h += '<div class="list">';
-  state.transfers.slice().sort(cmpDate).reverse().forEach(function(t){
-    h += '<button class="item" data-act="edit-trf" data-id="'+esc(t.id)+'"><div class="l"><div class="t">'+fmtDate(t.date)+'</div>'+
-      '<div class="d">'+esc(t.platform)+'</div></div><div class="r"><b>'+eur.format(t.amount)+'</b></div></button>';
-  });
-  var tot = sum(state.transfers,function(t){return t.amount;});
-  return h+'</div><div class="ledger" style="margin-top:14px">'+li("Total transferido",eur.format(tot))+'</div>';
+  return h+filterBar(fTrf,yearsOf(state.transfers),null)+'<div id="listbox">'+trfListHtml()+'</div>';
+}
+function applyFilter(){
+  var q = document.getElementById("fq"), y = document.getElementById("fyear"), a = document.getElementById("fasset");
+  var f = tab==="ops" ? fOps : fTrf;
+  if(q) f.q = q.value;
+  if(y) f.year = y.value;
+  if(a && tab==="ops") f.asset = a.value;
+  var box = document.getElementById("listbox");
+  if(box) box.innerHTML = tab==="ops" ? opsListHtml() : trfListHtml();
+}
+
+/* ---------- Proyección ---------- */
+function projSeries(v0,contrib,fee,ratePct,months){
+  var m = Math.pow(1+ratePct/100,1/12)-1, net = contrib>0 ? Math.max(0,contrib-fee) : 0, v = v0, out = [v0];
+  for(var i=1;i<=months;i++){ v = v*(1+m)+net; out.push(v); }
+  return out;
+}
+function pctLabel(n){ return String(Math.round(n*10)/10).replace(".",",")+" %"; }
+function projField(key,label,val,step){
+  return '<label class="f">'+label+'<input type="number" inputmode="decimal" step="'+step+'" data-proj="'+key+'" value="'+val+'" aria-label="'+label+'"></label>';
+}
+function viewProy(c){
+  var p = state.proj;
+  var h = '<div class="sec-h" style="margin-top:6px"><h2>Proyección</h2></div>';
+  h += '<section class="panel" style="margin-top:0"><div class="pgrid">'+
+    projField("contrib","Aportación mensual (€)",p.contrib,"any")+
+    projField("ret","Rentabilidad anual (%)",p.ret,"any")+
+    projField("years","Años",p.years,"1")+
+    projField("fee","Comisión por compra (€)",p.fee,"any")+
+    '</div><p class="note">Se parte de tu cartera de hoy ('+eur.format(c.total)+') y se supone una compra al mes. Es una hipótesis, no una previsión: los mercados no rinden igual cada año.</p></section>';
+  return h+'<div id="projout">'+projOut(c)+'</div>';
+}
+function projOut(c){
+  var p = state.proj, months = p.years*12, v0 = Math.max(c.total,0);
+  if(!(v0>0) && !(p.contrib>0)) return '<div class="empty">Escribe una aportación mensual para ver la proyección.</div>';
+  var lo = projSeries(v0,p.contrib,p.fee,p.ret-3,months),
+      mid = projSeries(v0,p.contrib,p.fee,p.ret,months),
+      hi = projSeries(v0,p.contrib,p.fee,p.ret+3,months),
+      base = []; for(var i=0;i<=months;i++) base.push(v0+p.contrib*i);
+  var end = months, paid = p.contrib*months, fees = p.contrib>0 ? Math.min(p.fee,p.contrib)*months : 0;
+  var h = panelSec("Cómo podría evolucionar",projChart([
+    {n:"Solo aportado",c:"--orange",d:base,dash:true},
+    {n:"Con "+pctLabel(p.ret-3),c:"--violet",d:lo},
+    {n:"Con "+pctLabel(p.ret),c:"--blue",d:mid,bold:true},
+    {n:"Con "+pctLabel(p.ret+3),c:"--teal",d:hi}
+  ],p.years));
+  var gain = mid[end]-base[end];
+  h += panelSec("Dentro de "+p.years+(p.years===1?" año":" años"),'<div class="ledger">'+
+    li("Cartera de hoy",eur.format(v0))+
+    li("Aportaciones nuevas",eur.format(paid))+
+    li("Comisiones pagadas",eur.format(fees))+
+    li("Total aportado",eur.format(base[end]))+
+    li("Con "+pctLabel(p.ret-3),eur.format(lo[end]))+
+    li("Con "+pctLabel(p.ret)+" (tu hipótesis)",'<b>'+eur.format(mid[end])+'</b>')+
+    li("Con "+pctLabel(p.ret+3),eur.format(hi[end]))+
+    li("Ganancia sobre lo aportado, con "+pctLabel(p.ret),'<span class="'+cls(gain)+'">'+eurS.format(gain)+'</span>')+
+    '</div>');
+  var g = state.goal && !state.goal.off ? state.goal : null;
+  if(g){
+    var hit = -1;
+    for(var k=0;k<=months;k++){ if(mid[k]>=g.amount){ hit = k; break; } }
+    var txt = hit<0 ? "No se alcanza en "+p.years+(p.years===1?" año":" años")+" con esta hipótesis." :
+              hit===0 ? "Ya la has alcanzado." :
+              "En unos "+(hit>=12 ? (Math.floor(hit/12))+" a. "+(hit%12)+" m." : hit+" meses")+".";
+    h += panelSec("Tu meta",'<div class="ledger">'+li(esc(g.name||"Mi meta"),eur.format(g.amount),"para el "+fmtDate(g.date))+li("Con "+pctLabel(p.ret),txt)+'</div>');
+  }
+  return h;
+}
+function projChart(series,years){
+  var W=340,H=210,pl=58,pr=12,pt=10,pb=26, months = series[0].d.length-1;
+  var top = 0; series.forEach(function(s2){ s2.d.forEach(function(v){ if(v>top) top = v; }); });
+  var ymax = niceMax(top||1);
+  function X(i){ return pl+i/months*(W-pl-pr); }
+  function Y(v){ return pt+(1-v/ymax)*(H-pt-pb); }
+  var g = "";
+  for(var i=0;i<=4;i++){
+    var v = ymax*i/4, y = Y(v);
+    g += '<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/>'+
+         '<text x="'+(pl-6)+'" y="'+(y+3.5)+'" text-anchor="end" font-size="10" style="fill:var(--muted)">'+Math.round(v).toLocaleString("es-ES")+' €</text>';
+  }
+  var step = years<=6 ? 1 : years<=12 ? 2 : 5, xl = "";
+  for(var yr=0; yr<=years; yr+=step){
+    xl += '<text x="'+X(yr*12)+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" style="fill:var(--muted)">'+yr+'</text>';
+  }
+  var lines = series.map(function(s2){
+    var d = "";
+    for(var j=0;j<=months;j+=(months>120?3:1)){ d += (j===0?"M":" L")+X(j).toFixed(1)+" "+Y(s2.d[j]).toFixed(1); }
+    d += " L"+X(months).toFixed(1)+" "+Y(s2.d[months]).toFixed(1);
+    return '<path d="'+d+'" fill="none" style="stroke:var('+s2.c+')" stroke-width="'+(s2.bold?2.6:1.8)+'"'+(s2.dash?' stroke-dasharray="5 4"':'')+' stroke-linejoin="round"/>';
+  }).join("");
+  return '<div class="chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Proyección de la cartera">'+g+lines+xl+'</svg>'+
+    '<div class="legend">'+series.map(function(s2){ return '<span><i class="dot" style="background:var('+s2.c+')"></i>'+s2.n+'</span>'; }).join("")+'</div>'+
+    '<div class="note">Eje horizontal: años desde hoy.</div></div>';
+}
+function updateProj(){
+  var box = document.getElementById("projout");
+  if(box) box.innerHTML = projOut(compute());
 }
 
 function viewMas(){
@@ -445,7 +651,7 @@ function allocChart(c){
 function render(){
   var c = compute();
   document.getElementById("acc").textContent = (state.defaults.platform||"IBKR")+" · "+fmtDate(todayStr());
-  var v = tab==="resumen" ? viewResumen(c) : tab==="ops" ? viewOps() : tab==="trf" ? viewTrf() : viewMas();
+  var v = tab==="resumen" ? viewResumen(c) : tab==="ops" ? viewOps() : tab==="trf" ? viewTrf() : tab==="proy" ? viewProy(c) : viewMas();
   document.getElementById("app").innerHTML = '<div class="wrap'+(tab==="resumen"?" wide":"")+'">'+v+'</div>';
   Array.prototype.forEach.call(document.querySelectorAll("#nav button"),function(b){
     b.classList.toggle("on", b.dataset.tab===tab);
@@ -471,13 +677,22 @@ function openSheet(kind,id){
       '<div class="two"><label class="f">Comisión (€)<input id="f-fee" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.fee:d.fee)+'"></label>'+
       '<label class="f">Plataforma<input id="f-platform" value="'+esc(o?o.platform:d.platform)+'"></label></div>'+
       '<label class="f">Tipo de activo<input id="f-type" value="'+esc(o?o.type:d.type)+'"></label>'+
+      '<label class="f">Nota (opcional)<input id="f-note" maxlength="200" autocomplete="off" value="'+esc(o?o.note:"")+'"></label>'+
       '<div class="preview"><span>Total de la operación</span><span id="f-total">'+eur.format(0)+'</span></div>';
-  } else {
+  } else if(kind==="trf"){
     var t = id ? state.transfers.filter(function(x){return x.id===id;})[0] : null;
     h = '<h3>'+(t?"Editar transferencia":"Nueva transferencia")+'</h3>'+
       '<label class="f">Fecha<input id="f-date" type="date" value="'+(t?t.date:todayStr())+'"></label>'+
       '<label class="f">Cantidad (€)<input id="f-amount" type="number" inputmode="decimal" step="any" min="0" value="'+(t?t.amount:"")+'"></label>'+
-      '<label class="f">Plataforma<input id="f-platform" value="'+esc(t?t.platform:d.platform)+'"></label>';
+      '<label class="f">Plataforma<input id="f-platform" value="'+esc(t?t.platform:d.platform)+'"></label>'+
+      '<label class="f">Nota (opcional)<input id="f-note" maxlength="200" autocomplete="off" value="'+esc(t?t.note:"")+'"></label>';
+  } else {
+    var g = id && state.goal && !state.goal.off ? state.goal : null;
+    h = '<h3>'+(g?"Editar meta":"Fijar una meta")+'</h3>'+
+      '<label class="f">Nombre (opcional)<input id="f-gname" maxlength="60" autocomplete="off" value="'+esc(g?g.name:"")+'" placeholder="Por ejemplo, mudanza a Dubái"></label>'+
+      '<label class="f">Importe objetivo (€)<input id="f-amount" type="number" inputmode="decimal" step="any" min="0" value="'+(g?g.amount:"")+'"></label>'+
+      '<label class="f">Fecha objetivo<input id="f-date" type="date" min="'+todayStr()+'" value="'+(g?g.date:"")+'"></label>'+
+      '<p class="note">La meta se compara con el valor liquidativo neto de tu cartera: posiciones más efectivo.</p>';
   }
   h += '<div class="err" id="f-err" role="alert"></div>'+
     '<div class="row"><button class="btn ghost" data-act="close">Cancelar</button><button class="btn" data-act="save">Guardar</button></div>'+
@@ -500,8 +715,17 @@ function updateTotal(){
 }
 function fail(m){ document.getElementById("f-err").textContent = m; }
 
+function saveGoal(){
+  var amount = num("f-amount"), date = val("f-date"), name = val("f-gname").trim().slice(0,60);
+  if(!(amount>0)) return fail("El importe de la meta debe ser mayor que 0.");
+  if(!date) return fail("Elige la fecha objetivo.");
+  if(toTime(date) <= Date.now()) return fail("La fecha objetivo debe ser futura.");
+  state.goal = {name:name,amount:amount,date:date,u:Date.now()};
+  persist(); closeSheet(); render();
+}
 function save(){
   if(!editing) return;
+  if(editing.kind==="goal") return saveGoal();
   var date = val("f-date"), platform = val("f-platform").trim();
   if(!date) return fail("Elige una fecha.");
   if(!platform) return fail("Escribe la plataforma.");
@@ -512,14 +736,14 @@ function save(){
     if(!(qty>0)) return fail("La cantidad debe ser mayor que 0.");
     if(!(price>0)) return fail("El precio debe ser mayor que 0.");
     if(!(fee>=0)) return fail("Escribe la comisión (0 si no hay).");
-    var rec = {id:editing.id||uid(),platform:platform,type:type,date:date,asset:asset,qty:qty,price:price,fee:fee,u:Date.now()};
+    var rec = {id:editing.id||uid(),platform:platform,type:type,date:date,asset:asset,qty:qty,price:price,fee:fee,note:val("f-note").trim().slice(0,200),u:Date.now()};
     if(editing.id) state.ops = state.ops.map(function(x){return x.id===editing.id?rec:x;});
     else state.ops.push(rec);
     state.defaults = {platform:platform,type:type,asset:asset,fee:fee};
   } else {
     var amount = num("f-amount");
     if(!(amount>0)) return fail("La cantidad debe ser mayor que 0.");
-    var r = {id:editing.id||uid(),platform:platform,date:date,amount:amount,u:Date.now()};
+    var r = {id:editing.id||uid(),platform:platform,date:date,amount:amount,note:val("f-note").trim().slice(0,200),u:Date.now()};
     if(editing.id) state.transfers = state.transfers.map(function(x){return x.id===editing.id?r:x;});
     else state.transfers.push(r);
     state.defaults.platform = platform;
@@ -530,6 +754,7 @@ function del(){
   if(!editing || !editing.id) return;
   var b = document.getElementById("f-del");
   if(!delArmed){ delArmed = true; b.textContent = "Pulsa otra vez para eliminar"; return; }
+  if(editing.kind==="goal"){ state.goal = {off:true,u:Date.now()}; persist(); closeSheet(); render(); return; }
   state.deleted[editing.id] = Date.now();
   if(editing.kind==="op") state.ops = state.ops.filter(function(x){return x.id!==editing.id;});
   else state.transfers = state.transfers.filter(function(x){return x.id!==editing.id;});
@@ -559,24 +784,24 @@ function withTimeout(p,ms){
 function csvCell(v){ var s = String(v); return /[;"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function nc(n){ return String(n).replace(".",","); }
 function csvOps(){
-  var rows = [["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)"]];
+  var rows = [["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)","Nota"]];
   state.ops.slice().sort(cmpDate).forEach(function(o){
     var g = o.qty*o.price;
-    rows.push([o.platform,o.type,fmtDate(o.date),o.asset,nc(o.qty),nc(o.price),nc(+g.toFixed(4)),nc(o.fee),nc(+(g+o.fee).toFixed(4))]);
+    rows.push([o.platform,o.type,fmtDate(o.date),o.asset,nc(o.qty),nc(o.price),nc(+g.toFixed(4)),nc(o.fee),nc(+(g+o.fee).toFixed(4)),o.note||""]);
   });
   return "\ufeff"+rows.map(function(r){return r.map(csvCell).join(";");}).join("\r\n");
 }
 function csvTrf(){
-  var rows = [["Plataforma","Fecha","Cantidad (€)"]];
-  state.transfers.slice().sort(cmpDate).forEach(function(t){ rows.push([t.platform,fmtDate(t.date),nc(t.amount)]); });
+  var rows = [["Plataforma","Fecha","Cantidad (€)","Nota"]];
+  state.transfers.slice().sort(cmpDate).forEach(function(t){ rows.push([t.platform,fmtDate(t.date),nc(t.amount),t.note||""]); });
   return "\ufeff"+rows.map(function(r){return r.map(csvCell).join(";");}).join("\r\n");
 }
 function dateObj(s){ var p = s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2],12); }
 function buildXlsx(){
   var X = window.XLSX, wb = X.utils.book_new(), EUR = '#,##0.00 "€"', n, i;
   var ops = state.ops.slice().sort(cmpDate);
-  var a1 = [["HISTORIAL DE OPERACIONES"],["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)"]];
-  ops.forEach(function(o){ a1.push([o.platform,o.type,dateObj(o.date),o.asset,o.qty,o.price,null,o.fee,null]); });
+  var a1 = [["HISTORIAL DE OPERACIONES"],["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)","Nota"]];
+  ops.forEach(function(o){ a1.push([o.platform,o.type,dateObj(o.date),o.asset,o.qty,o.price,null,o.fee,null,o.note||""]); });
   var w1 = X.utils.aoa_to_sheet(a1,{cellDates:true});
   ops.forEach(function(o,k){
     n = k+3;
@@ -584,19 +809,19 @@ function buildXlsx(){
     w1["G"+n] = {t:"n",f:"E"+n+"*F"+n,v:o.qty*o.price,z:EUR};
     w1["I"+n] = {t:"n",f:"G"+n+"+H"+n,v:o.qty*o.price+o.fee,z:EUR};
   });
-  w1["!ref"] = "A1:I"+(ops.length+2);
-  w1["!merges"] = [{s:{r:0,c:0},e:{r:0,c:8}}];
-  w1["!cols"] = [{wch:11},{wch:8},{wch:12},{wch:36},{wch:10},{wch:11},{wch:17},{wch:13},{wch:12}];
+  w1["!ref"] = "A1:J"+(ops.length+2);
+  w1["!merges"] = [{s:{r:0,c:0},e:{r:0,c:9}}];
+  w1["!cols"] = [{wch:11},{wch:8},{wch:12},{wch:36},{wch:10},{wch:11},{wch:17},{wch:13},{wch:12},{wch:30}];
   X.utils.book_append_sheet(wb,w1,"OPERATIONS");
 
   var trf = state.transfers.slice().sort(cmpDate);
-  var a2 = [["HISTORIAL DE TRANSFERENCIAS"],["Plataforma","Fecha","Cantidad (€)"]];
-  trf.forEach(function(t){ a2.push([t.platform,dateObj(t.date),t.amount]); });
+  var a2 = [["HISTORIAL DE TRANSFERENCIAS"],["Plataforma","Fecha","Cantidad (€)","Nota"]];
+  trf.forEach(function(t){ a2.push([t.platform,dateObj(t.date),t.amount,t.note||""]); });
   var w2 = X.utils.aoa_to_sheet(a2,{cellDates:true});
   trf.forEach(function(t,k){ n = k+3; w2["B"+n].z = "dd/mm/yyyy"; w2["C"+n].z = EUR; });
-  w2["!ref"] = "A1:C"+(trf.length+2);
-  w2["!merges"] = [{s:{r:0,c:0},e:{r:0,c:2}}];
-  w2["!cols"] = [{wch:11},{wch:12},{wch:14}];
+  w2["!ref"] = "A1:D"+(trf.length+2);
+  w2["!merges"] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+  w2["!cols"] = [{wch:11},{wch:12},{wch:14},{wch:30}];
   X.utils.book_append_sheet(wb,w2,"TRANSFERS");
 
   var c = compute();
@@ -716,6 +941,7 @@ function mergeState(inc){
       state.prices[k] = inc.prices[k]; state.pricesU[k] = ui;
     }
   });
+  if(inc.goal && (!state.goal || (inc.goal.u||0) > (state.goal.u||0))){ state.goal = inc.goal; res.upd++; }
   return res;
 }
 function syncFromFile(file){
@@ -763,9 +989,11 @@ document.addEventListener("click",function(e){
   else if(a==="save") save();
   else if(a==="del") del();
   else if(a==="seed") seed();
+  else if(a==="goal") openSheet("goal", state.goal && !state.goal.off ? "goal" : null);
+  else if(a==="clear-filters"){ fOps = {q:"",year:"",asset:""}; fTrf = {q:"",year:""}; render(); }
   else if(a==="wipe"){
     if(!wipeArmed){ wipeArmed = true; render(); return; }
-    wipeArmed = false; var gone = state.deleted; state.ops.concat(state.transfers).forEach(function(r){ gone[r.id] = Date.now(); }); state = blank(); state.deleted = gone; persist(); render();
+    wipeArmed = false; var gone = state.deleted; state.ops.concat(state.transfers).forEach(function(r){ gone[r.id] = Date.now(); }); var hadGoal = state.goal && !state.goal.off; state = blank(); state.deleted = gone; if(hadGoal) state.goal = {off:true,u:Date.now()}; persist(); render();
   }
   else if(a==="sync-save") saveFile("mi-cartera-sync.json",JSON.stringify(exportData(),null,2));
   else if(a==="sync-pick"){ var sp = document.getElementById("sync-file"); if(sp) sp.click(); }
@@ -776,10 +1004,23 @@ document.addEventListener("click",function(e){
 });
 document.addEventListener("input",function(e){
   if(["f-qty","f-price","f-fee"].indexOf(e.target.id)>=0) updateTotal();
+  if(e.target.id==="fq") applyFilter();
+  var pk = e.target.dataset && e.target.dataset.proj;
+  if(pk){
+    var raw = e.target.value;
+    if(raw==="") return;
+    var pv = parseFloat(String(raw).replace(",","."));
+    if(!isFinite(pv)) return;
+    var lim = {contrib:[0,1000000],ret:[-20,30],years:[1,40],fee:[0,1000]}[pk];
+    pv = Math.min(lim[1],Math.max(lim[0],pv));
+    if(pk==="years") pv = Math.round(pv);
+    state.proj[pk] = pv; persist(); updateProj();
+  }
 });
 document.addEventListener("change",function(e){
   if(e.target.id==="sync-file"){ if(e.target.files[0]) syncFromFile(e.target.files[0]); e.target.value=""; return; }
   if(e.target.id==="imp-file"){ if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; return; }
+  if(e.target.id==="fyear" || e.target.id==="fasset"){ applyFilter(); return; }
   var asset = e.target.dataset && e.target.dataset.price;
   if(asset===undefined) return;
   var v = parseFloat(String(e.target.value).replace(",","."));
