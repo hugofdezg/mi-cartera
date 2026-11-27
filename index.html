@@ -189,7 +189,7 @@ nav button .lg{display:none}
 
 /* ---------- Estado ---------- */
 var LS_KEY = "mi-cartera.v1";
-var APP_VERSION = "9";
+var APP_VERSION = "11";
 async function refreshApp(){
   try{
     if("serviceWorker" in navigator){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
@@ -415,8 +415,8 @@ function viewResumen(c){
   h += '</div><div class="col">';
 
   h += panelSec("Cuenta",'<div class="ledger">'+
-    li("Total gastado",eur.format(c.spent))+
-    li("Invertido (importe bruto)",eur.format(c.gross))+
+    li("Total gastado (bruto)",eur.format(c.spent))+
+    li("Invertido (neto)",eur.format(c.gross))+
     li("Efectivo en cartera",'<span class="'+(c.cash<0?"neg":"")+'">'+eur.format(c.cash)+'</span>')+
     '</div>');
   h += panelSec("Reparto de la cartera",allocChart(c));
@@ -445,12 +445,12 @@ function opsListHtml(){
   }).sort(cmpDate).reverse();
   if(!list.length) return '<div class="empty">Ninguna operación coincide con los filtros.<br><button class="linkbtn" data-act="clear-filters">Quitar filtros</button></div>';
   var net = sum(list,function(o){return o.qty*o.price;}), tot = sum(list,function(o){return o.qty*o.price+o.fee;}), fee = sum(list,function(o){return o.fee;});
-  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Neto '+eur.format(net)+' · Comisiones '+eur.format(fee)+' · Total '+eur.format(tot)+'</span></div><div class="list">';
+  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Neto '+eur.format(net)+' · Comisiones '+eur.format(fee)+' · Bruto '+eur.format(tot)+'</span></div><div class="list">';
   list.forEach(function(o){
     h += '<button class="item" data-act="edit-op" data-id="'+esc(o.id)+'"><div class="l"><div class="t">'+esc(o.asset)+'</div>'+
       '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div>'+
       (o.note ? '<div class="nt">“'+esc(o.note)+'”</div>' : '')+'</div>'+
-      '<div class="r"><b>'+eur.format(o.qty*o.price+o.fee)+'</b><span>neto '+eur.format(o.qty*o.price)+'</span><span>comisión '+eur.format(o.fee)+'</span></div></button>';
+      '<div class="r"><b>'+eur.format(o.qty*o.price)+'</b><span>bruto '+eur.format(o.qty*o.price+o.fee)+'</span><span>comisión '+eur.format(o.fee)+'</span></div></button>';
   });
   return h+'</div><div class="note">Toca una operación para editarla o borrarla.</div>';
 }
@@ -775,7 +775,7 @@ function openSheet(kind,id){
       '<label class="f">Plataforma<input id="f-platform" value="'+esc(o?o.platform:d.platform)+'"></label></div>'+
       '<label class="f">Tipo de activo<input id="f-type" value="'+esc(o?o.type:d.type)+'"></label>'+
       '<label class="f">Nota (opcional)<input id="f-note" maxlength="200" autocomplete="off" value="'+esc(o?o.note:"")+'"></label>'+
-      '<div class="preview"><span>Total (neto + comisión)</span><span id="f-total">'+eur.format(0)+'</span></div>';
+      '<div class="preview"><span>Bruto (neto + comisión)</span><span id="f-total">'+eur.format(0)+'</span></div>';
   } else if(kind==="trf"){
     var t = id ? state.transfers.filter(function(x){return x.id===id;})[0] : null;
     h = '<h3>'+(t?"Editar transferencia":"Nueva transferencia")+'</h3>'+
@@ -900,7 +900,7 @@ function withTimeout(p,ms){
 function csvCell(v){ var s = String(v); return /[;"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function nc(n){ return String(n).replace(".",","); }
 function csvOps(){
-  var rows = [["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)","Nota"]];
+  var rows = [["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe neto (€)","Comisión (€)","Importe bruto (€)","Nota"]];
   state.ops.slice().sort(cmpDate).forEach(function(o){
     var g = o.qty*o.price;
     rows.push([o.platform,o.type,fmtDate(o.date),o.asset,nc(o.qty),nc(o.price),nc(+g.toFixed(4)),nc(o.fee),nc(+(g+o.fee).toFixed(4)),o.note||""]);
@@ -916,7 +916,7 @@ function dateObj(s){ var p = s.split("-").map(Number); return new Date(p[0],p[1]
 function buildXlsx(){
   var X = window.XLSX, wb = X.utils.book_new(), EUR = '#,##0.00 "€"', n, i;
   var ops = state.ops.slice().sort(cmpDate);
-  var a1 = [["HISTORIAL DE OPERACIONES"],["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe bruto (€)","Comisión (€)","Total (€)","Nota"]];
+  var a1 = [["HISTORIAL DE OPERACIONES"],["Plataforma","Activo","Fecha","Activo","Cantidad","Precio (€)","Importe neto (€)","Comisión (€)","Importe bruto (€)","Nota"]];
   ops.forEach(function(o){ a1.push([o.platform,o.type,dateObj(o.date),o.asset,o.qty,o.price,null,o.fee,null,o.note||""]); });
   var w1 = X.utils.aoa_to_sheet(a1,{cellDates:true});
   ops.forEach(function(o,k){
@@ -941,7 +941,7 @@ function buildXlsx(){
   X.utils.book_append_sheet(wb,w2,"TRANSFERS");
 
   var c = compute();
-  var a3 = [["RESUMEN"],["Activo","Cantidad","Importe bruto (€)","Comisión (€)","Total (€)"]];
+  var a3 = [["RESUMEN"],["Activo","Cantidad","Importe neto (€)","Comisión (€)","Importe bruto (€)"]];
   c.assets.forEach(function(a){ a3.push([a.asset,null,null,null,null]); });
   a3.push(["Suma total",null,null,null,null]);
   var w3 = X.utils.aoa_to_sheet(a3);
@@ -963,7 +963,7 @@ function buildXlsx(){
   var base = tn+2;
   var extra = [
     ["Total transferido","SUM(TRANSFERS!C3:C1000)",c.transferred,EUR],
-    ["Total gastado","SUM(OPERATIONS!I3:I1000)",c.spent,EUR],
+    ["Total gastado (bruto)","SUM(OPERATIONS!I3:I1000)",c.spent,EUR],
     ["Efectivo en cartera","B"+base+"-B"+(base+1),c.cash,EUR],
     ["Valor actual de las posiciones",null,c.value,EUR],
     ["Rentabilidad (€)","B"+(base+3)+"-B"+(base+1),c.pnl,EUR],
