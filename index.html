@@ -189,7 +189,7 @@ nav button .lg{display:none}
 
 /* ---------- Estado ---------- */
 var LS_KEY = "mi-cartera.v1";
-var APP_VERSION = "14";
+var APP_VERSION = "17";
 async function refreshApp(){
   try{
     if("serviceWorker" in navigator){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
@@ -326,7 +326,7 @@ function compute(){
 function isEmpty(){ return !state.ops.length && !state.transfers.length; }
 
 function ticker(n){ var m = String(n).trim().split(/[\s(]/)[0]; return m || String(n); }
-function metric(k,v,sub,c){ return '<div><span>'+k+'</span><b'+(c?' class="'+c+'"':'')+'>'+v+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'; }
+function metric(k,v,sub,c,wide){ return '<div'+(wide?' style="grid-column:1/-1"':'')+'><span>'+k+'</span><b'+(c?' class="'+c+'"':'')+'>'+v+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'; }
 function panelSec(title,inner){ return '<section class="sec"><div class="sec-h"><h2>'+title+'</h2></div><div class="panel" style="margin-top:0">'+inner+'</div></section>'; }
 
 var MONTH = 1000*60*60*24*30.4375;
@@ -389,7 +389,6 @@ function viewResumen(c){
     metric("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" de lo invertido":"")+
     '</div>';
   h += '<div class="row"><button class="btn" data-act="new-op">Nueva operación</button><button class="btn ghost" data-act="new-trf">Nueva transferencia</button></div>';
-  h += goalPanel(c);
 
   var t = '';
   if(!c.assets.length){ t = '<div class="empty" style="padding:6px 0">Cuando registres una compra aparecerá aquí.</div>'; }
@@ -414,13 +413,8 @@ function viewResumen(c){
   h += panelSec("Valor actual de las posiciones",t);
   h += '</div><div class="col">';
 
-  h += panelSec("Cuenta",'<div class="ledger">'+
-    li("Invertido (neto)",eur.format(c.gross))+
-    li("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" del neto":"")+
-    li("Total gastado (bruto)",eur.format(c.spent),"neto + comisiones")+
-    li("Efectivo en cartera",'<span class="'+(c.cash<0?"neg":"")+'">'+eur.format(c.cash)+'</span>')+
-    '</div>');
   h += panelSec("Reparto de la cartera",allocChart(c));
+  h += goalPanel(c);
   h += '</div></div>';
   return h;
 }
