@@ -189,7 +189,7 @@ nav button .lg{display:none}
 
 /* ---------- Estado ---------- */
 var LS_KEY = "mi-cartera.v1";
-var APP_VERSION = "11";
+var APP_VERSION = "14";
 async function refreshApp(){
   try{
     if("serviceWorker" in navigator){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
@@ -384,7 +384,7 @@ function viewResumen(c){
     '<div class="sub">P&amp;L no realizado, con comisiones incluidas</div></div>';
   h += '<div class="mgrid">'+
     metric("Efectivo",eur.format(c.cash),"",c.cash<0?"neg":"")+
-    metric("Posiciones",eur.format(c.value))+
+    metric("Invertido (neto)",eur.format(c.gross))+
     metric("Total transferido",eur.format(c.transferred))+
     metric("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" de lo invertido":"")+
     '</div>';
@@ -411,12 +411,13 @@ function viewResumen(c){
     t += '</div>';
   }
   if(c.assets.length) t += quoteBlock();
-  h += panelSec("Posiciones",t);
+  h += panelSec("Valor actual de las posiciones",t);
   h += '</div><div class="col">';
 
   h += panelSec("Cuenta",'<div class="ledger">'+
-    li("Total gastado (bruto)",eur.format(c.spent))+
     li("Invertido (neto)",eur.format(c.gross))+
+    li("Comisiones",eur.format(c.fee),c.gross?pctPlain.format(c.fee/c.gross)+" del neto":"")+
+    li("Total gastado (bruto)",eur.format(c.spent),"neto + comisiones")+
     li("Efectivo en cartera",'<span class="'+(c.cash<0?"neg":"")+'">'+eur.format(c.cash)+'</span>')+
     '</div>');
   h += panelSec("Reparto de la cartera",allocChart(c));
@@ -445,12 +446,12 @@ function opsListHtml(){
   }).sort(cmpDate).reverse();
   if(!list.length) return '<div class="empty">Ninguna operación coincide con los filtros.<br><button class="linkbtn" data-act="clear-filters">Quitar filtros</button></div>';
   var net = sum(list,function(o){return o.qty*o.price;}), tot = sum(list,function(o){return o.qty*o.price+o.fee;}), fee = sum(list,function(o){return o.fee;});
-  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Neto '+eur.format(net)+' · Comisiones '+eur.format(fee)+' · Bruto '+eur.format(tot)+'</span></div><div class="list">';
+  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Total invertido (neto) '+eur.format(net)+'</span></div><div class="list">';
   list.forEach(function(o){
     h += '<button class="item" data-act="edit-op" data-id="'+esc(o.id)+'"><div class="l"><div class="t">'+esc(o.asset)+'</div>'+
       '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div>'+
       (o.note ? '<div class="nt">“'+esc(o.note)+'”</div>' : '')+'</div>'+
-      '<div class="r"><b>'+eur.format(o.qty*o.price)+'</b><span>bruto '+eur.format(o.qty*o.price+o.fee)+'</span><span>comisión '+eur.format(o.fee)+'</span></div></button>';
+      '<div class="r"><b>'+eur.format(o.qty*o.price)+'</b></div></button>';
   });
   return h+'</div><div class="note">Toca una operación para editarla o borrarla.</div>';
 }
