@@ -189,6 +189,14 @@ nav button .lg{display:none}
 
 /* ---------- Estado ---------- */
 var LS_KEY = "mi-cartera.v1";
+var APP_VERSION = "9";
+async function refreshApp(){
+  try{
+    if("serviceWorker" in navigator){ var regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(function(r){ return r.unregister(); })); }
+    if(window.caches){ var ks = await caches.keys(); await Promise.all(ks.map(function(k){ return caches.delete(k); })); }
+  }catch(e){}
+  location.reload();
+}
 var state = blank();
 var tab = "resumen";
 var ref = null, dbReady = false, downloads = true;
@@ -659,7 +667,11 @@ function viewMas(){
     '<input type="file" id="imp-file" accept=".json,application/json" hidden>';
   if(isEmpty()) h += '<button class="btn ghost wide" data-act="seed">Importar mis datos actuales</button>';
   else h += '<button class="btn danger wide" data-act="wipe">'+(wipeArmed?"Pulsa otra vez para borrar todo":"Borrar todos los datos")+'</button>';
-  return h+'</section>';
+  h += '</section>';
+  h += '<section class="panel"><h3 style="font-size:15px">Aplicación</h3>'+
+    '<p class="note" style="font-size:13px">Versión '+APP_VERSION+'. Si has subido cambios y no los ves, pulsa el botón: recarga la app sin tocar tus datos.</p>'+
+    '<button class="btn ghost wide" data-act="refresh-app">Buscar actualización</button></section>';
+  return h;
 }
 
 /* ---------- Gráficos ---------- */
@@ -1096,6 +1108,7 @@ document.addEventListener("click",function(e){
   else if(a==="del") del();
   else if(a==="seed") seed();
   else if(a==="quotes") fetchQuotes();
+  else if(a==="refresh-app") refreshApp();
   else if(a==="goal") openSheet("goal", state.goal && !state.goal.off ? "goal" : null);
   else if(a==="clear-filters"){ fOps = {q:"",year:"",asset:""}; fTrf = {q:"",year:""}; render(); }
   else if(a==="wipe"){

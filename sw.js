@@ -1,6 +1,6 @@
 // Service worker: guarda la app en el dispositivo para que abra sin conexión.
 // Si cambias index.html, sube el número de versión para que se actualice.
-const CACHE = "mi-cartera-v8";
+const CACHE = "mi-cartera-v9";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-512-maskable.png", "./apple-touch-icon.png"];
 const EXTRA = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
@@ -33,6 +33,23 @@ self.addEventListener("fetch", (e) => {
   const own = host === self.location.hostname;
   const allowed = ["cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"];
   if (!own && allowed.indexOf(host) < 0) return;
+  if (own) {
+    // Archivos de la app: primero la red (para ver siempre la versión nueva) y, sin conexión, la copia guardada.
+    e.respondWith((async () => {
+      const c = await caches.open(CACHE);
+      try {
+        const r = await fetch(e.request.url, { cache: "no-cache" });
+        if (r && r.ok) c.put(e.request, r.clone());
+        return r;
+      } catch (err) {
+        const cached = await c.match(e.request, { ignoreSearch: true });
+        if (cached) return cached;
+        if (e.request.mode === "navigate") return (await c.match("./index.html")) || Response.error();
+        return Response.error();
+      }
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const c = await caches.open(CACHE);
     const cached = await c.match(e.request, { ignoreSearch: true });
