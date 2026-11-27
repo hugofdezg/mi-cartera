@@ -109,7 +109,7 @@ button{cursor:pointer}
 .item .d{color:var(--muted);font-size:12px;font-family:var(--mono)}
 .item .r{text-align:right;flex:none}
 .item .r b{display:block;font-family:var(--mono);font-weight:500;font-size:14px}
-.item .r span{color:var(--muted);font-size:11px;font-family:var(--mono)}
+.item .r span{display:block;color:var(--muted);font-size:11px;font-family:var(--mono)}
 
 /* Gráficos */
 .chart svg{display:block;width:100%;height:auto}
@@ -138,7 +138,7 @@ nav button.on{color:var(--ink);box-shadow:inset 0 2px 0 var(--brand)}
 .fbar{margin:6px 0 4px}
 .fbar input,.fbar select{display:block;width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);font-size:16px;color-scheme:dark}
 .fbar .two{margin-top:8px}
-.sumline{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);padding:8px 0;font-family:var(--mono)}
+.sumline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;font-size:12px;color:var(--muted);padding:8px 0;font-family:var(--mono)}
 .item .nt{color:var(--muted);font-size:12px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .linkbtn{background:none;border:0;color:var(--blue);padding:0;font-size:13px;font-weight:500}
 .bar{height:10px;border-radius:2px;background:var(--line);overflow:hidden;margin:10px 0 6px}
@@ -436,13 +436,13 @@ function opsListHtml(){
       matchQ([o.asset,o.note,o.platform,fmtDate(o.date)].join(" "),fOps.q);
   }).sort(cmpDate).reverse();
   if(!list.length) return '<div class="empty">Ninguna operación coincide con los filtros.<br><button class="linkbtn" data-act="clear-filters">Quitar filtros</button></div>';
-  var tot = sum(list,function(o){return o.qty*o.price+o.fee;}), fee = sum(list,function(o){return o.fee;});
-  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Total '+eur.format(tot)+' · Comisiones '+eur.format(fee)+'</span></div><div class="list">';
+  var net = sum(list,function(o){return o.qty*o.price;}), tot = sum(list,function(o){return o.qty*o.price+o.fee;}), fee = sum(list,function(o){return o.fee;});
+  var h = '<div class="sumline"><span>'+list.length+(list.length===1?" operación":" operaciones")+'</span><span>Neto '+eur.format(net)+' · Comisiones '+eur.format(fee)+' · Total '+eur.format(tot)+'</span></div><div class="list">';
   list.forEach(function(o){
     h += '<button class="item" data-act="edit-op" data-id="'+esc(o.id)+'"><div class="l"><div class="t">'+esc(o.asset)+'</div>'+
       '<div class="d">'+fmtDate(o.date)+' · '+esc(o.platform)+' · '+qtyF.format(o.qty)+' × '+eurP.format(o.price)+'</div>'+
       (o.note ? '<div class="nt">“'+esc(o.note)+'”</div>' : '')+'</div>'+
-      '<div class="r"><b>'+eur.format(o.qty*o.price+o.fee)+'</b><span>comisión '+eur.format(o.fee)+'</span></div></button>';
+      '<div class="r"><b>'+eur.format(o.qty*o.price+o.fee)+'</b><span>neto '+eur.format(o.qty*o.price)+'</span><span>comisión '+eur.format(o.fee)+'</span></div></button>';
   });
   return h+'</div><div class="note">Toca una operación para editarla o borrarla.</div>';
 }
@@ -744,6 +744,7 @@ function render(){
 /* ---------- Formularios ---------- */
 var editing = null; // {kind,id}
 function openSheet(kind,id){
+  lastSrc = "price";
   editing = {kind:kind,id:id||null};
   delArmed = false;
   var d = state.defaults, h = "";
@@ -756,11 +757,13 @@ function openSheet(kind,id){
       '<datalist id="assets">'+assets.map(function(a){return '<option value="'+esc(a)+'">';}).join("")+'</datalist>'+
       '<div class="two"><label class="f">Cantidad<input id="f-qty" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.qty:"")+'"></label>'+
       '<label class="f">Precio (€)<input id="f-price" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.price:"")+'"></label></div>'+
+      '<label class="f">Importe neto (€), cantidad × precio<input id="f-netin" type="number" inputmode="decimal" step="any" min="0" value="'+(o?String(+(o.qty*o.price).toFixed(4)):"")+'"></label>'+
+      '<div class="note">Escribe la cantidad y el importe neto, y el precio por acción se calcula solo. O escribe el precio y se calcula el importe.</div>'+
       '<div class="two"><label class="f">Comisión (€)<input id="f-fee" type="number" inputmode="decimal" step="any" min="0" value="'+(o?o.fee:d.fee)+'"></label>'+
       '<label class="f">Plataforma<input id="f-platform" value="'+esc(o?o.platform:d.platform)+'"></label></div>'+
       '<label class="f">Tipo de activo<input id="f-type" value="'+esc(o?o.type:d.type)+'"></label>'+
       '<label class="f">Nota (opcional)<input id="f-note" maxlength="200" autocomplete="off" value="'+esc(o?o.note:"")+'"></label>'+
-      '<div class="preview"><span>Total de la operación</span><span id="f-total">'+eur.format(0)+'</span></div>';
+      '<div class="preview"><span>Total (neto + comisión)</span><span id="f-total">'+eur.format(0)+'</span></div>';
   } else if(kind==="trf"){
     var t = id ? state.transfers.filter(function(x){return x.id===id;})[0] : null;
     h = '<h3>'+(t?"Editar transferencia":"Nueva transferencia")+'</h3>'+
@@ -789,11 +792,29 @@ function openSheet(kind,id){
 function closeSheet(){ document.getElementById("overlay").hidden = true; editing = null; }
 function val(id){ return (document.getElementById(id)||{}).value || ""; }
 function num(id){ return parseFloat(String(val(id)).replace(",",".")); }
+var lastSrc = "price"; // qué campo tocó el usuario por última vez: price o net
+function round(n,d){ return +n.toFixed(d); }
+function setVal(id,v){ var el = document.getElementById(id); if(el) el.value = String(v); }
+function syncFields(src){
+  var q = num("f-qty"), p = num("f-price"), n = num("f-netin");
+  if(src==="price"){
+    lastSrc = "price";
+    if(q>0 && p>0) setVal("f-netin",round(q*p,4));
+  } else if(src==="net"){
+    lastSrc = "net";
+    if(q>0 && n>0) setVal("f-price",round(n/q,6));
+  } else if(lastSrc==="net"){
+    if(q>0 && n>0) setVal("f-price",round(n/q,6));
+  } else if(q>0 && p>0){
+    setVal("f-netin",round(q*p,4));
+  }
+}
 function updateTotal(){
   var el = document.getElementById("f-total");
   if(!el) return;
-  var q = num("f-qty"), p = num("f-price"), f = num("f-fee");
-  el.textContent = eur.format((isFinite(q)&&isFinite(p)?q*p:0)+(isFinite(f)?f:0));
+  var q = num("f-qty"), p = num("f-price"), f = num("f-fee"), nt = num("f-netin");
+  var n = (lastSrc==="net" && nt>0) ? nt : (isFinite(q)&&isFinite(p) ? q*p : 0);
+  el.textContent = eur.format(n+(isFinite(f)?f:0));
 }
 function fail(m){ document.getElementById("f-err").textContent = m; }
 
@@ -813,7 +834,8 @@ function save(){
   if(!platform) return fail("Escribe la plataforma.");
   if(editing.kind==="op"){
     var asset = val("f-asset").trim(), type = val("f-type").trim() || "ETF";
-    var qty = num("f-qty"), price = num("f-price"), fee = num("f-fee");
+    var qty = num("f-qty"), price = num("f-price"), fee = num("f-fee"), netv = num("f-netin");
+    if(lastSrc==="net" && qty>0 && netv>0) price = netv/qty;
     if(!asset) return fail("Escribe el nombre del activo.");
     if(!(qty>0)) return fail("La cantidad debe ser mayor que 0.");
     if(!(price>0)) return fail("El precio debe ser mayor que 0.");
@@ -1088,7 +1110,8 @@ document.addEventListener("click",function(e){
   else if(a==="exp-trf") saveFile("transferencias.csv",csvTrf());
 });
 document.addEventListener("input",function(e){
-  if(["f-qty","f-price","f-fee"].indexOf(e.target.id)>=0) updateTotal();
+  if(e.target.id==="f-qty") syncFields("qty"); else if(e.target.id==="f-price") syncFields("price"); else if(e.target.id==="f-netin") syncFields("net");
+  if(["f-qty","f-price","f-fee","f-netin"].indexOf(e.target.id)>=0) updateTotal();
   if(e.target.id==="fq") applyFilter();
   var pk = e.target.dataset && e.target.dataset.proj;
   if(pk){
